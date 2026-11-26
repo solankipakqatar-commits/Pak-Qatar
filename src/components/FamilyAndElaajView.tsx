@@ -13,10 +13,13 @@ import {
 } from 'lucide-react';
 import { ElaajProvider, FamilyMember } from '../types/pqfs';
 import { DEMO_CUSTOMER, DEMO_ELAAJ_PROVIDERS } from '../data/pqfsData';
+import { PqModal, PqTabSwap } from './MotionPrimitives';
 
 interface FamilyAndElaajViewProps {
   isAuthenticated: boolean;
   initialMode: 'family' | 'elaaj';
+  mode?: 'family' | 'elaaj';
+  onModeChange?: (nextMode: 'family' | 'elaaj') => void;
   familyMembers: FamilyMember[];
   onUpdateFamilyMember: (id: string, sharePercent: number) => void;
   onRequireLogin: () => void;
@@ -26,12 +29,19 @@ interface FamilyAndElaajViewProps {
 export const FamilyAndElaajView: React.FC<FamilyAndElaajViewProps> = ({
   isAuthenticated,
   initialMode,
+  mode,
+  onModeChange,
   familyMembers,
   onUpdateFamilyMember,
   onRequireLogin,
   onGoToClaims,
 }) => {
-  const [subMode, setSubMode] = useState<'family' | 'elaaj'>(initialMode);
+  const [localMode, setLocalMode] = useState<'family' | 'elaaj'>(initialMode);
+  const subMode = mode ?? localMode;
+  const setSubMode = (nextMode: 'family' | 'elaaj') => {
+    if (onModeChange) onModeChange(nextMode);
+    else setLocalMode(nextMode);
+  };
   const [cityFilter, setCityFilter] = useState<string>('All');
   const [typeFilter, setTypeFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -118,6 +128,7 @@ export const FamilyAndElaajView: React.FC<FamilyAndElaajViewProps> = ({
         </div>
       </div>
 
+      <PqTabSwap swapKey={subMode}>
       {/* Sub-mode 1: My Family & Beneficiaries (Monogram-only non-human icons, strictly compliant) */}
       {subMode === 'family' && (
         <div className="space-y-4">
@@ -125,7 +136,7 @@ export const FamilyAndElaajView: React.FC<FamilyAndElaajViewProps> = ({
             {familyMembers.map((member) => (
               <div
                 key={member.id}
-                className="rounded-2xl border border-[#E5E7EB] bg-white p-5 flex flex-col justify-between"
+                className="pq-card-interactive rounded-2xl border border-[#E5E7EB] bg-white p-5 flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center gap-3">
@@ -193,7 +204,7 @@ export const FamilyAndElaajView: React.FC<FamilyAndElaajViewProps> = ({
         <div className="space-y-6">
           {/* Digital Health Card */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-            <div className="lg:col-span-6 rounded-3xl bg-[#A32035] text-white p-6 flex flex-col justify-between shadow-sm">
+            <div className="pq-card-interactive lg:col-span-6 rounded-3xl bg-[#A32035] text-white p-6 flex flex-col justify-between shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-[11px] font-semibold tracking-wider text-[#F5B335]">
@@ -317,10 +328,15 @@ export const FamilyAndElaajView: React.FC<FamilyAndElaajViewProps> = ({
           </section>
         </div>
       )}
+      </PqTabSwap>
 
       {/* Provider Details Modal */}
-      {selectedProvider && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+      <PqModal
+        open={Boolean(selectedProvider)}
+        onClose={() => setSelectedProvider(null)}
+        ariaLabel={selectedProvider?.name ?? 'Provider Details'}
+      >
+        {selectedProvider && (
           <div className="bg-white rounded-3xl max-w-md w-full p-6 border border-[#E5E7EB] shadow-lg">
             <div className="text-xs font-semibold text-[#007A48]">
               {selectedProvider.type} · {selectedProvider.city}
@@ -352,88 +368,94 @@ export const FamilyAndElaajView: React.FC<FamilyAndElaajViewProps> = ({
               Close
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </PqModal>
 
       {/* Sensitive Nominee Update Modal with OTP Verification */}
-      {editingMember && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+      <PqModal
+        open={Boolean(editingMember)}
+        onClose={() => setEditingMember(null)}
+        ariaLabel="Update Beneficiary Share"
+      >
+        {editingMember && (
           <div className="bg-white rounded-3xl max-w-md w-full p-6 border border-[#E5E7EB] shadow-lg">
-            {!updateConfirmed ? (
-              <>
-                <div className="flex items-center gap-2 text-xs font-semibold text-[#A32035]">
-                  <UserCheck className="w-4 h-4" />
-                  <span>Verification Required for Beneficiary Changes</span>
+            <PqTabSwap swapKey={updateConfirmed ? 'confirmed' : 'form'}>
+              {!updateConfirmed ? (
+                <>
+                  <div className="flex items-center gap-2 text-xs font-semibold text-[#A32035]">
+                    <UserCheck className="w-4 h-4" />
+                    <span>Verification Required for Beneficiary Changes</span>
+                  </div>
+                  <h3 className="mt-1 text-lg font-bold text-[#1E2022]">
+                    Update Share: {editingMember.fullName}
+                  </h3>
+                  <div className="mt-4 space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#1E2022] mb-1">
+                        Proposed Beneficiary Share (%)
+                      </label>
+                      <input
+                        type="number"
+                        min={5}
+                        max={100}
+                        value={newShare}
+                        onChange={(e) => setNewShare(e.target.value)}
+                        className="w-full min-h-[44px] px-3 rounded-xl border border-[#E5E7EB] text-sm tabular-nums"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#1E2022] mb-1">
+                        Verification OTP (Demo OTP: 123456)
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={otpInput}
+                        onChange={(e) => setOtpInput(e.target.value)}
+                        className="w-full min-h-[44px] px-3 rounded-xl border border-[#E5E7EB] text-sm tabular-nums"
+                      />
+                    </div>
+                    {otpError && <p className="text-xs font-medium text-[#A32035]">{otpError}</p>}
+                    <div className="flex gap-2.5 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingMember(null)}
+                        className="flex-1 min-h-[44px] rounded-xl border border-[#E5E7EB] text-xs font-medium"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveNomineeUpdate}
+                        className="flex-1 min-h-[44px] rounded-xl bg-[#A32035] text-white text-xs font-medium"
+                      >
+                        Verify & Submit
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-2">
+                  <CheckCircle2 className="w-10 h-10 text-[#007A48] mx-auto" />
+                  <h3 className="mt-3 text-base font-bold text-[#1E2022]">
+                    Update Request Logged (Demo)
+                  </h3>
+                  <p className="mt-1 text-xs text-[#5C6066]">
+                    Updated illustrative share for {editingMember.fullName} to {newShare}%.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setEditingMember(null)}
+                    className="mt-5 w-full min-h-[44px] rounded-xl bg-[#A32035] text-white text-xs font-medium"
+                  >
+                    Done
+                  </button>
                 </div>
-                <h3 className="mt-1 text-lg font-bold text-[#1E2022]">
-                  Update Share: {editingMember.fullName}
-                </h3>
-                <div className="mt-4 space-y-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-[#1E2022] mb-1">
-                      Proposed Beneficiary Share (%)
-                    </label>
-                    <input
-                      type="number"
-                      min={5}
-                      max={100}
-                      value={newShare}
-                      onChange={(e) => setNewShare(e.target.value)}
-                      className="w-full min-h-[44px] px-3 rounded-xl border border-[#E5E7EB] text-sm tabular-nums"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-[#1E2022] mb-1">
-                      Verification OTP (Demo OTP: 123456)
-                    </label>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      value={otpInput}
-                      onChange={(e) => setOtpInput(e.target.value)}
-                      className="w-full min-h-[44px] px-3 rounded-xl border border-[#E5E7EB] text-sm tabular-nums"
-                    />
-                  </div>
-                  {otpError && <p className="text-xs font-medium text-[#A32035]">{otpError}</p>}
-                  <div className="flex gap-2.5 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setEditingMember(null)}
-                      className="flex-1 min-h-[44px] rounded-xl border border-[#E5E7EB] text-xs font-medium"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSaveNomineeUpdate}
-                      className="flex-1 min-h-[44px] rounded-xl bg-[#A32035] text-white text-xs font-medium"
-                    >
-                      Verify & Submit
-                    </button>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-2">
-                <CheckCircle2 className="w-10 h-10 text-[#007A48] mx-auto" />
-                <h3 className="mt-3 text-base font-bold text-[#1E2022]">
-                  Update Request Logged (Demo)
-                </h3>
-                <p className="mt-1 text-xs text-[#5C6066]">
-                  Updated illustrative share for {editingMember.fullName} to {newShare}%.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setEditingMember(null)}
-                  className="mt-5 w-full min-h-[44px] rounded-xl bg-[#A32035] text-white text-xs font-medium"
-                >
-                  Done
-                </button>
-              </div>
-            )}
+              )}
+            </PqTabSwap>
           </div>
-        </div>
-      )}
+        )}
+      </PqModal>
     </div>
   );
 };

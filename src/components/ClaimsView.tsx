@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -10,7 +11,8 @@ import {
   Upload,
 } from 'lucide-react';
 import { ClaimStage, TakafulCertificate, TakafulClaim } from '../types/pqfs';
-import { ProcessingOverlay } from './BrandAssets';
+import { ensureLoadingAssetsReady, ProcessingOverlay } from './BrandAssets';
+import { PQ_EASE, PqStaggerGroup, PqStaggerItem, PqTabSwap } from './MotionPrimitives';
 
 const CLAIM_STAGES: ClaimStage[] = [
   'Submitted',
@@ -100,34 +102,36 @@ export const ClaimsView: React.FC<ClaimsViewProps> = ({
   };
 
   const handleSubmitClaim = () => {
-    if (!selectedCert) return;
-    setProcessing(true);
-    window.setTimeout(() => {
-      const ref = `CLM-${selectedCert.entity === 'family' ? 'PQF' : 'PQG'}-2026-${Math.floor(
-        1000 + Math.random() * 9000
-      )}`;
-      const created: TakafulClaim = {
-        id: `clm-${Date.now()}`,
-        referenceNumber: ref,
-        certificateNumber: selectedCert.certificateNumber,
-        productName: selectedCert.productName,
-        entity: selectedCert.entity,
-        claimType,
-        incidentDate,
-        submittedDate: '26 Nov 2026',
-        estimatedAmountPkr: Math.max(1000, Number(estimatedAmount) || 0),
-        currentStage: 'Submitted',
-        summary:
-          summary.trim() ||
-          `Demonstration claim submitted for ${selectedCert.productName} (${claimType}).`,
-        documents: attachedDocs,
-        lastUpdatedNote: 'Claim intake logged in demonstration mode; queued for document review.',
-      };
-      onClaimSubmitted(created);
-      setNewClaimRef(ref);
-      setProcessing(false);
-      setSubmitStep('done');
-    }, 1500);
+    if (!selectedCert || processing) return;
+    void ensureLoadingAssetsReady().then(() => {
+      setProcessing(true);
+      window.setTimeout(() => {
+        const ref = `CLM-${selectedCert.entity === 'family' ? 'PQF' : 'PQG'}-2026-${Math.floor(
+          1000 + Math.random() * 9000
+        )}`;
+        const created: TakafulClaim = {
+          id: `clm-${Date.now()}`,
+          referenceNumber: ref,
+          certificateNumber: selectedCert.certificateNumber,
+          productName: selectedCert.productName,
+          entity: selectedCert.entity,
+          claimType,
+          incidentDate,
+          submittedDate: '26 Nov 2026',
+          estimatedAmountPkr: Math.max(1000, Number(estimatedAmount) || 0),
+          currentStage: 'Submitted',
+          summary:
+            summary.trim() ||
+            `Demonstration claim submitted for ${selectedCert.productName} (${claimType}).`,
+          documents: attachedDocs,
+          lastUpdatedNote: 'Claim intake logged in demonstration mode; queued for document review.',
+        };
+        onClaimSubmitted(created);
+        setNewClaimRef(ref);
+        setProcessing(false);
+        setSubmitStep('done');
+      }, 2000);
+    });
   };
 
   // Guided Journey 4 Claim Submission Flow
@@ -160,6 +164,7 @@ export const ClaimsView: React.FC<ClaimsViewProps> = ({
             {submitStep === 'done' ? 'Claim Submitted (Demo)' : 'Submit a Takaful Claim'}
           </h1>
 
+          <PqTabSwap swapKey={submitStep}>
           {submitStep === 'details' && (
             <div className="mt-5 space-y-4">
               <div>
@@ -340,6 +345,7 @@ export const ClaimsView: React.FC<ClaimsViewProps> = ({
               </button>
             </div>
           )}
+          </PqTabSwap>
         </div>
       </div>
     );
@@ -386,90 +392,101 @@ export const ClaimsView: React.FC<ClaimsViewProps> = ({
             No claims matched your search.
           </div>
         ) : (
-          filteredClaims.map((claim) => {
-            const stageIndex = CLAIM_STAGES.indexOf(claim.currentStage);
-            return (
-              <div
-                key={claim.id}
-                className="rounded-2xl border border-[#E5E7EB] bg-white p-5 space-y-4"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="text-xs font-semibold text-[#A32035]">
-                      {claim.entity === 'family' ? 'Family Takaful · PQFTL' : 'General Takaful · PQGTL'} ·{' '}
-                      {claim.referenceNumber}
-                    </div>
-                    <h2 className="text-base font-bold text-[#1E2022] mt-0.5">{claim.claimType}</h2>
-                    <div className="text-xs text-[#5C6066] mt-0.5">
-                      {claim.productName} · Submitted {claim.submittedDate}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs text-[#5C6066]">Estimated / Settled</div>
-                    <div className="text-sm font-bold text-[#1E2022] tabular-nums">
-                      {formatMoney(claim.approvedAmountPkr ?? claim.estimatedAmountPkr)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 5-Stage Visual Claim Timeline */}
-                <div className="pt-2">
-                  <div className="grid grid-cols-5 gap-1.5">
-                    {CLAIM_STAGES.map((stage, idx) => {
-                      const reached = idx <= stageIndex;
-                      const isCurrent = idx === stageIndex;
-                      return (
-                        <div key={stage} className="flex flex-col items-start">
-                          <div
-                            className={`w-full h-2 rounded-full transition-colors ${
-                              reached
-                                ? stage === 'Completed'
-                                  ? 'bg-[#007A48]'
-                                  : isCurrent
-                                    ? 'bg-[#F5B335]'
-                                    : 'bg-[#A32035]'
-                                : 'bg-[#E5E7EB]'
-                            }`}
-                          />
-                          <span
-                            className={`mt-1.5 text-[10px] leading-tight font-medium ${
-                              isCurrent
-                                ? 'text-[#1E2022] font-bold'
-                                : reached
-                                  ? 'text-[#5C6066]'
-                                  : 'text-[#9CA3AF]'
-                            }`}
-                          >
-                            {stage}
-                          </span>
+          <PqStaggerGroup className="space-y-4">
+            {filteredClaims.map((claim) => {
+              const stageIndex = CLAIM_STAGES.indexOf(claim.currentStage);
+              return (
+                <PqStaggerItem key={claim.id}>
+                  <div className="pq-card-interactive rounded-2xl border border-[#E5E7EB] bg-white p-5 space-y-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-semibold text-[#A32035]">
+                          {claim.entity === 'family' ? 'Family Takaful · PQFTL' : 'General Takaful · PQGTL'} ·{' '}
+                          {claim.referenceNumber}
                         </div>
-                      );
-                    })}
+                        <h2 className="text-base font-bold text-[#1E2022] mt-0.5">{claim.claimType}</h2>
+                        <div className="text-xs text-[#5C6066] mt-0.5">
+                          {claim.productName} · Submitted {claim.submittedDate}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-[#5C6066]">Estimated / Settled</div>
+                        <div className="text-sm font-bold text-[#1E2022] tabular-nums">
+                          {formatMoney(claim.approvedAmountPkr ?? claim.estimatedAmountPkr)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 5-Stage Visual Claim Timeline */}
+                    <div className="pt-2">
+                      <div className="grid grid-cols-5 gap-1.5">
+                        {CLAIM_STAGES.map((stage, idx) => {
+                          const reached = idx <= stageIndex;
+                          const isCurrent = idx === stageIndex;
+                          const fillColor =
+                            stage === 'Completed'
+                              ? 'bg-[#007A48]'
+                              : isCurrent
+                                ? 'bg-[#F5B335]'
+                                : 'bg-[#A32035]';
+                          return (
+                            <div key={stage} className="flex flex-col items-start">
+                              <div className="w-full h-2 rounded-full bg-[#E5E7EB] overflow-hidden">
+                                {reached && (
+                                  <motion.div
+                                    initial={{ scaleX: 0 }}
+                                    animate={{ scaleX: 1 }}
+                                    transition={{
+                                      duration: 0.35,
+                                      delay: idx * 0.06,
+                                      ease: PQ_EASE,
+                                    }}
+                                    style={{ transformOrigin: 'left center' }}
+                                    className={`w-full h-full rounded-full ${fillColor}`}
+                                  />
+                                )}
+                              </div>
+                              <span
+                                className={`mt-1.5 text-[10px] leading-tight font-medium ${
+                                  isCurrent
+                                    ? 'text-[#1E2022] font-bold'
+                                    : reached
+                                      ? 'text-[#5C6066]'
+                                      : 'text-[#9CA3AF]'
+                                }`}
+                              >
+                                {stage}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-[#F6F6F7] text-xs text-[#5C6066]">
+                      <span className="font-semibold text-[#1E2022]">Latest Update: </span>
+                      {claim.lastUpdatedNote}
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#5C6066]">
+                      <span className="inline-flex items-center gap-1.5">
+                        <FileCheck2 className="w-3.5 h-3.5 text-[#007A48]" />
+                        <span>{claim.documents.length} documents on file</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={onOpenSupport}
+                        className="font-medium text-[#A32035] hover:underline inline-flex items-center gap-1"
+                      >
+                        <PhoneCall className="w-3.5 h-3.5" />
+                        <span>Claims Support</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-[#F6F6F7] text-xs text-[#5C6066]">
-                  <span className="font-semibold text-[#1E2022]">Latest Update: </span>
-                  {claim.lastUpdatedNote}
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#5C6066]">
-                  <span className="inline-flex items-center gap-1.5">
-                    <FileCheck2 className="w-3.5 h-3.5 text-[#007A48]" />
-                    <span>{claim.documents.length} documents on file</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={onOpenSupport}
-                    className="font-medium text-[#A32035] hover:underline inline-flex items-center gap-1"
-                  >
-                    <PhoneCall className="w-3.5 h-3.5" />
-                    <span>Claims Support</span>
-                  </button>
-                </div>
-              </div>
-            );
-          })
+                </PqStaggerItem>
+              );
+            })}
+          </PqStaggerGroup>
         )}
       </div>
     </div>

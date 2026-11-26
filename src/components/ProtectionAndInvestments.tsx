@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -19,7 +20,8 @@ import {
 } from '../types/pqfs';
 import { DEMO_CUSTOMER } from '../data/pqfsData';
 import { TakafulWheel } from './TakafulWheel';
-import { PakQatarLogo, ProcessingOverlay } from './BrandAssets';
+import { ensureLoadingAssetsReady, PakQatarLogo, ProcessingOverlay } from './BrandAssets';
+import { PQ_EASE, PqModal, PqTabSwap } from './MotionPrimitives';
 
 interface ProtectionAndInvestmentsProps {
   isAuthenticated: boolean;
@@ -81,71 +83,74 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
   const totalPortfolioValue = funds.reduce((s, f) => s + f.valuePkr, 0);
 
   const handleSubmitInvestmentAction = () => {
+    if (processing) return;
     const amt = Math.max(1000, Number(actionAmount) || 0);
-    setProcessing(true);
-    window.setTimeout(() => {
-      let updated = funds;
-      let title = '';
-      let detail = '';
-      const ref = `INV-PQF-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    void ensureLoadingAssetsReady().then(() => {
+      setProcessing(true);
+      window.setTimeout(() => {
+        let updated = funds;
+        let title = '';
+        let detail = '';
+        const ref = `INV-PQF-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
-      if (invAction === 'topup') {
-        updated = funds.map((f, idx) =>
-          idx === 0
-            ? {
-                ...f,
-                valuePkr: f.valuePkr + amt,
-                units: Number((f.units + amt / f.navPkr).toFixed(2)),
+        if (invAction === 'topup') {
+          updated = funds.map((f, idx) =>
+            idx === 0
+              ? {
+                  ...f,
+                  valuePkr: f.valuePkr + amt,
+                  units: Number((f.units + amt / f.navPkr).toFixed(2)),
+                }
+              : f
+          );
+          title = 'Top-Up Request Recorded (Demo)';
+          detail = `Illustrative Top-Up of PKR ${amt.toLocaleString()} allocated to ${funds[0].fundName}.`;
+        } else if (invAction === 'withdrawal') {
+          updated = funds.map((f, idx) =>
+            idx === 0
+              ? {
+                  ...f,
+                  valuePkr: Math.max(0, f.valuePkr - amt),
+                  units: Math.max(0, Number((f.units - amt / f.navPkr).toFixed(2))),
+                }
+              : f
+          );
+          title = 'Partial Withdrawal Requested (Demo)';
+          detail = `Illustrative withdrawal of PKR ${amt.toLocaleString()} queued for bank IBFT settlement.`;
+        } else if (invAction === 'switch') {
+          if (switchFromId !== switchToId) {
+            updated = funds.map((f) => {
+              if (f.id === switchFromId) {
+                const newVal = Math.max(0, f.valuePkr - amt);
+                return {
+                  ...f,
+                  valuePkr: newVal,
+                  units: Number((newVal / f.navPkr).toFixed(2)),
+                };
               }
-            : f
-        );
-        title = 'Top-Up Request Recorded (Demo)';
-        detail = `Illustrative Top-Up of PKR ${amt.toLocaleString()} allocated to ${funds[0].fundName}.`;
-      } else if (invAction === 'withdrawal') {
-        updated = funds.map((f, idx) =>
-          idx === 0
-            ? {
-                ...f,
-                valuePkr: Math.max(0, f.valuePkr - amt),
-                units: Math.max(0, Number((f.units - amt / f.navPkr).toFixed(2))),
+              if (f.id === switchToId) {
+                const newVal = f.valuePkr + amt;
+                return {
+                  ...f,
+                  valuePkr: newVal,
+                  units: Number((newVal / f.navPkr).toFixed(2)),
+                };
               }
-            : f
-        );
-        title = 'Partial Withdrawal Requested (Demo)';
-        detail = `Illustrative withdrawal of PKR ${amt.toLocaleString()} queued for bank IBFT settlement.`;
-      } else if (invAction === 'switch') {
-        if (switchFromId !== switchToId) {
-          updated = funds.map((f) => {
-            if (f.id === switchFromId) {
-              const newVal = Math.max(0, f.valuePkr - amt);
-              return {
-                ...f,
-                valuePkr: newVal,
-                units: Number((newVal / f.navPkr).toFixed(2)),
-              };
-            }
-            if (f.id === switchToId) {
-              const newVal = f.valuePkr + amt;
-              return {
-                ...f,
-                valuePkr: newVal,
-                units: Number((newVal / f.navPkr).toFixed(2)),
-              };
-            }
-            return f;
-          });
+              return f;
+            });
+          }
+          const fromName = funds.find((f) => f.id === switchFromId)?.fundName ?? '';
+          const toName = funds.find((f) => f.id === switchToId)?.fundName ?? '';
+          title = 'Fund Switch Submitted (Demo)';
+          detail = `Illustrative switch of PKR ${amt.toLocaleString()} from ${fromName} to ${toName}.`;
         }
-        const fromName = funds.find((f) => f.id === switchFromId)?.fundName ?? '';
-        const toName = funds.find((f) => f.id === switchToId)?.fundName ?? '';
-        title = 'Fund Switch Submitted (Demo)';
-        detail = `Illustrative switch of PKR ${amt.toLocaleString()} from ${fromName} to ${toName}.`;
-      }
 
-      onUpdateFunds(updated);
-      setProcessing(false);
-      setInvAction(null);
-      setActionResult({ title, reference: ref, detail });
-    }, 1450);
+        onUpdateFunds(updated);
+        setProcessing(false);
+        setInvAction(null);
+        setActionResult({ title, reference: ref, detail });
+      }, 2000);
+    });
   };
 
   return (
@@ -195,16 +200,17 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
         </div>
       </div>
 
-      {/* Sub-tab 1: 360° Wheel & Product Catalogue */}
-      {subTab === 'explore' && (
-        <div className="rounded-3xl border border-[#007A48]/20 bg-[#EAF3EE] p-5 sm:p-7">
-          <TakafulWheel
-            entity={wheelEntity}
-            onEntityChange={onWheelEntityChange}
-            onSelectProduct={onSelectProduct}
-          />
-        </div>
-      )}
+      <PqTabSwap swapKey={subTab}>
+        {/* Sub-tab 1: 360° Wheel & Product Catalogue */}
+        {subTab === 'explore' && (
+          <div className="rounded-3xl border border-[#007A48]/20 bg-[#EAF3EE] p-5 sm:p-7">
+            <TakafulWheel
+              entity={wheelEntity}
+              onEntityChange={onWheelEntityChange}
+              onSelectProduct={onSelectProduct}
+            />
+          </div>
+        )}
 
       {/* Sub-tab 2: My Certificates */}
       {subTab === 'certificates' && (
@@ -269,17 +275,18 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
                 </div>
               </div>
 
-              {filteredCerts.length === 0 ? (
-                <div className="rounded-2xl border border-[#E5E7EB] bg-white p-8 text-center text-sm text-[#5C6066]">
-                  No {certStatusFilter.toLowerCase()} certificates found for the selected company filter.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredCerts.map((cert) => (
-                    <div
-                      key={cert.id}
-                      className="rounded-2xl border border-[#E5E7EB] bg-white p-5 flex flex-col justify-between"
-                    >
+              <PqTabSwap swapKey={`${certStatusFilter}-${certEntityFilter}`}>
+                {filteredCerts.length === 0 ? (
+                  <div className="rounded-2xl border border-[#E5E7EB] bg-white p-8 text-center text-sm text-[#5C6066]">
+                    No {certStatusFilter.toLowerCase()} certificates found for the selected company filter.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredCerts.map((cert) => (
+                      <div
+                        key={cert.id}
+                        className="pq-card-interactive rounded-2xl border border-[#E5E7EB] bg-white p-5 flex flex-col justify-between"
+                      >
                       <div>
                         <div className="flex items-center justify-between gap-2 text-xs">
                           <span
@@ -344,8 +351,9 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
                       </div>
                     </div>
                   ))}
-                </div>
-              )}
+                  </div>
+                )}
+              </PqTabSwap>
             </div>
           )}
         </>
@@ -427,7 +435,7 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
                         key={fund.id}
                         type="button"
                         onClick={() => setActiveFundId(fund.id)}
-                        className={`w-full text-left rounded-2xl border p-4 transition-colors ${
+                        className={`pq-card-interactive w-full text-left rounded-2xl border p-4 transition-colors ${
                           isSelected
                             ? 'border-[#A32035] bg-white shadow-sm'
                             : 'border-[#E5E7EB] bg-white hover:border-[#A32035]/60'
@@ -499,11 +507,17 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
           )}
         </>
       )}
+      </PqTabSwap>
 
       {/* Certificate Detail Modal */}
-      {selectedCertModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl p-6 border border-[#E5E7EB] max-h-[88vh] overflow-y-auto">
+      <PqModal
+        open={Boolean(selectedCertModal)}
+        onClose={() => onSelectCertModal(null)}
+        variant="sheet"
+        ariaLabel={selectedCertModal?.productName ?? 'Certificate Details'}
+      >
+        {selectedCertModal && (
+          <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl p-6 border border-[#E5E7EB] max-h-[88vh] overflow-y-auto shadow-xl">
             <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
               <div>
                 <div className="text-xs font-semibold text-[#A32035]">
@@ -593,12 +607,16 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </PqModal>
 
       {/* Statement / Certificate Document Modal */}
-      {statementCert && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+      <PqModal
+        open={Boolean(statementCert)}
+        onClose={() => setStatementCert(null)}
+        ariaLabel="Digital Document Preview"
+      >
+        {statementCert && (
           <div className="bg-white rounded-3xl max-w-md w-full p-6 border border-[#E5E7EB] shadow-lg">
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#E5E7EB]">
               <div>
@@ -653,13 +671,18 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </PqModal>
 
       {/* Top-Up / Withdrawal / Fund Switch Modal */}
-      {invAction && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 border border-[#E5E7EB]">
+      <PqModal
+        open={Boolean(invAction)}
+        onClose={() => setInvAction(null)}
+        variant="sheet"
+        ariaLabel="Investment Request"
+      >
+        {invAction && (
+          <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 border border-[#E5E7EB] shadow-xl">
             <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
               <h3 className="text-base font-bold text-[#1E2022]">
                 {invAction === 'topup'
@@ -742,12 +765,16 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </PqModal>
 
       {/* Action Confirmation Modal */}
-      {actionResult && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+      <PqModal
+        open={Boolean(actionResult)}
+        onClose={() => setActionResult(null)}
+        ariaLabel={actionResult?.title ?? 'Action Confirmation'}
+      >
+        {actionResult && (
           <div className="bg-white rounded-3xl max-w-sm w-full p-6 border border-[#E5E7EB] text-center shadow-lg">
             <div className="w-12 h-12 mx-auto rounded-full bg-[#007A48]/10 text-[#007A48] flex items-center justify-center">
               <CheckCircle2 className="w-7 h-7" />
@@ -765,8 +792,8 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
               Done
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </PqModal>
     </div>
   );
 };
@@ -786,22 +813,35 @@ function NavTrendChart({ points }: { points: { month: string; nav: number }[] })
   });
 
   const polyline = coords.map((c) => `${c.x},${c.y}`).join(' ');
+  const chartKey = points.map((p) => p.nav).join('-');
 
   return (
     <div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-28 overflow-visible">
-        <polyline
+      <svg key={chartKey} viewBox={`0 0 ${width} ${height}`} className="w-full h-28 overflow-visible">
+        <motion.polyline
           fill="none"
           stroke="#007A48"
           strokeWidth="2.4"
           strokeLinecap="round"
           strokeLinejoin="round"
           points={polyline}
+          initial={{ pathLength: 0, opacity: 0.35 }}
+          animate={{ pathLength: 1, opacity: 1 }}
+          transition={{ duration: 0.65, ease: PQ_EASE }}
         />
-        {coords.map((c) => (
-          <g key={c.month}>
-            <circle cx={c.x} cy={c.y} r="3.5" fill="#FFFFFF" stroke="#A32035" strokeWidth="2" />
-          </g>
+        {coords.map((c, idx) => (
+          <motion.circle
+            key={c.month}
+            cx={c.x}
+            cy={c.y}
+            r="3.5"
+            fill="#FFFFFF"
+            stroke="#A32035"
+            strokeWidth="2"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.25, delay: 0.08 + idx * 0.06, ease: PQ_EASE }}
+          />
         ))}
       </svg>
       <div className="flex justify-between px-2 text-[10px] font-medium text-[#5C6066]">

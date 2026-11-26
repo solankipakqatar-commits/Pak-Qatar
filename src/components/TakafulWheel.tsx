@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   Briefcase,
   Building2,
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react';
 import { TakafulEntity, TakafulProduct } from '../types/pqfs';
 import { TAKAFUL_PRODUCTS } from '../data/pqfsData';
+import { PQ_EASE } from './MotionPrimitives';
 
 const REFERENCE_MAN_SRC = '/assets/aistudio/Always_Remember_Your_Afterlife__9a147a72.jpg';
 
@@ -300,6 +302,8 @@ export const TakafulWheel: React.FC<TakafulWheelProps> = ({
     snapToNearest(rotationDeg, velocity);
   };
 
+  const isFamily = entity === 'family';
+  const activeAccentHex = isFamily ? '#A32035' : '#007A48';
   const activeProduct = products[selectedIndex] ?? products[0];
 
   // Helper to build curved SVG circular arc path for each product label along the outer ring
@@ -330,6 +334,47 @@ export const TakafulWheel: React.FC<TakafulWheelProps> = ({
     return `M ${p1.x.toFixed(2)} ${p1.y.toFixed(2)} A ${radius} ${radius} 0 0 ${sweepFlag} ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
   };
 
+  // Helper to build annular wedge path for each product segment on the outer dial ring
+  const buildSegmentWedgePath = (index: number) => {
+    const centerDeg = index * stepAngle;
+    const startDeg = centerDeg - stepAngle / 2;
+    const endDeg = centerDeg + stepAngle / 2;
+    const rInner = 116.5;
+    const rOuter = 180.7;
+
+    const toXY = (deg: number, radius: number) => {
+      const rad = ((deg - 90) * Math.PI) / 180;
+      return {
+        x: 190 + radius * Math.cos(rad),
+        y: 190 + radius * Math.sin(rad),
+      };
+    };
+
+    const oStart = toXY(startDeg, rOuter);
+    const oEnd = toXY(endDeg, rOuter);
+    const iEnd = toXY(endDeg, rInner);
+    const iStart = toXY(startDeg, rInner);
+
+    return [
+      `M ${oStart.x.toFixed(2)} ${oStart.y.toFixed(2)}`,
+      `A ${rOuter} ${rOuter} 0 0 1 ${oEnd.x.toFixed(2)} ${oEnd.y.toFixed(2)}`,
+      `L ${iEnd.x.toFixed(2)} ${iEnd.y.toFixed(2)}`,
+      `A ${rInner} ${rInner} 0 0 0 ${iStart.x.toFixed(2)} ${iStart.y.toFixed(2)}`,
+      'Z',
+    ].join(' ');
+  };
+
+  const handleSegmentClick = (e: React.MouseEvent, product: TakafulProduct, index: number) => {
+    e.stopPropagation();
+    if (dragStateRef.current.totalMovedDeg < 8) {
+      if (index === selectedIndex) {
+        onSelectProduct(product);
+      } else {
+        rotateToProductIndex(index);
+      }
+    }
+  };
+
   return (
     <section aria-label="360 Degree Rotating Takaful Product Selector" className="w-full">
       {/* Category separation & View toggle */}
@@ -342,10 +387,10 @@ export const TakafulWheel: React.FC<TakafulWheelProps> = ({
           <button
             type="button"
             role="tab"
-            aria-selected={entity === 'family'}
+            aria-selected={isFamily}
             onClick={() => onEntityChange('family')}
-            className={`min-h-[40px] px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-              entity === 'family'
+            className={`min-h-[40px] px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors duration-300 ${
+              isFamily
                 ? 'bg-[#A32035] text-white shadow-sm'
                 : 'text-[#5C6066] hover:text-[#1E2022]'
             }`}
@@ -355,10 +400,10 @@ export const TakafulWheel: React.FC<TakafulWheelProps> = ({
           <button
             type="button"
             role="tab"
-            aria-selected={entity === 'general'}
+            aria-selected={!isFamily}
             onClick={() => onEntityChange('general')}
-            className={`min-h-[40px] px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-              entity === 'general'
+            className={`min-h-[40px] px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors duration-300 ${
+              !isFamily
                 ? 'bg-[#007A48] text-white shadow-sm'
                 : 'text-[#5C6066] hover:text-[#1E2022]'
             }`}
@@ -370,7 +415,11 @@ export const TakafulWheel: React.FC<TakafulWheelProps> = ({
         <button
           type="button"
           onClick={() => setViewMode((m) => (m === 'wheel' ? 'list' : 'wheel'))}
-          className="min-h-[40px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#E5E7EB] bg-white text-xs font-medium text-[#1E2022] hover:border-[#007A48] hover:text-[#007A48] transition-colors whitespace-nowrap"
+          className={`min-h-[40px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#E5E7EB] bg-white text-xs font-medium text-[#1E2022] transition-colors duration-300 whitespace-nowrap ${
+            isFamily
+              ? 'hover:border-[#A32035] hover:text-[#A32035]'
+              : 'hover:border-[#007A48] hover:text-[#007A48]'
+          }`}
         >
           {viewMode === 'wheel' ? (
             <>
@@ -386,36 +435,67 @@ export const TakafulWheel: React.FC<TakafulWheelProps> = ({
         </button>
       </div>
 
-      {viewMode === 'list' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {products.map((product) => (
-            <button
-              key={product.id}
-              type="button"
-              onClick={() => onSelectProduct(product)}
-              className="text-left p-4 rounded-2xl border border-[#E5E7EB] bg-white hover:border-[#007A48] transition-colors flex items-start gap-3.5 group"
-            >
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-[#007A48]/10 text-[#007A48]">
-                <ProductIcon iconKey={product.iconKey} className="w-5 h-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-[11px] font-medium text-[#5C6066]">
-                  {entity === 'family' ? 'PQFTL · Family Takaful' : 'PQGTL · General Takaful'}
+      <AnimatePresence mode="wait" initial={false}>
+        {viewMode === 'list' ? (
+          <motion.div
+            key={`list-${entity}`}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.22, ease: PQ_EASE }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-3"
+          >
+            {products.map((product) => (
+              <button
+                key={product.id}
+                type="button"
+                onClick={() => onSelectProduct(product)}
+                className={`pq-card-interactive text-left p-4 rounded-2xl border border-[#E5E7EB] bg-white flex items-start gap-3.5 group ${
+                  isFamily ? 'hover:border-[#A32035]' : 'hover:border-[#007A48]'
+                }`}
+              >
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-300 ${
+                    isFamily
+                      ? 'bg-[#A32035]/10 text-[#A32035]'
+                      : 'bg-[#007A48]/10 text-[#007A48]'
+                  }`}
+                >
+                  <ProductIcon iconKey={product.iconKey} className="w-5 h-5" />
                 </div>
-                <h4 className="text-[15px] font-semibold text-[#1E2022] group-hover:text-[#007A48] transition-colors mt-0.5">
-                  {product.name}
-                </h4>
-                <p className="text-xs text-[#5C6066] mt-1 line-clamp-2">{product.shortTagline}</p>
-                <div className="mt-2.5 text-xs font-medium text-[#A32035] inline-flex items-center gap-1">
-                  <span>Explore Product</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[11px] font-medium text-[#5C6066]">
+                    {isFamily ? 'PQFTL · Family Takaful' : 'PQGTL · General Takaful'}
+                  </div>
+                  <h4
+                    className={`text-[15px] font-semibold text-[#1E2022] transition-colors duration-300 mt-0.5 ${
+                      isFamily ? 'group-hover:text-[#A32035]' : 'group-hover:text-[#007A48]'
+                    }`}
+                  >
+                    {product.name}
+                  </h4>
+                  <p className="text-xs text-[#5C6066] mt-1 line-clamp-2">{product.shortTagline}</p>
+                  <div
+                    className={`mt-2.5 text-xs font-medium inline-flex items-center gap-1 transition-colors duration-300 ${
+                      isFamily ? 'text-[#A32035]' : 'text-[#007A48]'
+                    }`}
+                  >
+                    <span>Explore Product</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </div>
                 </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+              </button>
+            ))}
+          </motion.div>
+        ) : (
+          <motion.div
+            key="wheel-view"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.24, ease: PQ_EASE }}
+            className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center"
+          >
           {/* Signature Reference-Matched #007A48 Circular Dial */}
           <div className="lg:col-span-7 flex flex-col items-center">
             <div className="w-full flex items-center justify-between text-xs text-[#5C6066] mb-2 px-1">
@@ -431,7 +511,10 @@ export const TakafulWheel: React.FC<TakafulWheelProps> = ({
                 className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center"
                 aria-hidden="true"
               >
-                <div className="w-3 h-3 rotate-45 bg-[#F5B335] border-2 border-white shadow-xs" />
+                <div
+                  className="w-3.5 h-3.5 rotate-45 border-2 border-white shadow-xs transition-colors duration-300"
+                  style={{ backgroundColor: activeAccentHex }}
+                />
               </div>
 
               {/* Main #007A48 Circular Container */}
@@ -448,7 +531,7 @@ export const TakafulWheel: React.FC<TakafulWheelProps> = ({
                 {/* Static Crisp White Outer Border & Subtle Inner Concentric Circles (matching reference proportions) */}
                 <svg
                   viewBox="0 0 380 380"
-                  className="absolute inset-0 w-full h-full pointer-events-none"
+                  className="absolute inset-0 w-full h-full pointer-events-none z-10"
                   aria-hidden="true"
                 >
                   {/* Crisp outer white circular border */}
@@ -469,8 +552,8 @@ export const TakafulWheel: React.FC<TakafulWheelProps> = ({
                     fill="#007A48"
                     fillOpacity="0.45"
                     stroke="#FFFFFF"
-                    strokeOpacity="0.16"
-                    strokeWidth="1"
+                    strokeOpacity="0.22"
+                    strokeWidth="1.2"
                   />
                   <circle
                     cx="190"
@@ -483,7 +566,7 @@ export const TakafulWheel: React.FC<TakafulWheelProps> = ({
                   />
                 </svg>
 
-                {/* Rotating Ring: Radial Division Ticks + Clean White Curved Product Labels */}
+                {/* Rotating Ring: Entity-Colored Selected Wedge + Radial Division Ticks + Clean White Curved Product Labels */}
                 <div
                   className="absolute inset-0 rounded-full"
                   style={{
@@ -504,6 +587,44 @@ export const TakafulWheel: React.FC<TakafulWheelProps> = ({
                       ))}
                     </defs>
 
+                    {/* Inactive Outer Ring Wedges (deeper green-slate base so active #A32035 / #007A48 segment pops clearly) */}
+                    {products.map((product, index) => {
+                      if (index === selectedIndex) return null;
+                      return (
+                        <path
+                          key={`wedge-inactive-${product.id}`}
+                          d={buildSegmentWedgePath(index)}
+                          fill="#00462A"
+                          className="cursor-pointer"
+                          style={{
+                            transition: 'fill 320ms cubic-bezier(0.16, 1, 0.3, 1)',
+                          }}
+                          onClick={(e) => handleSegmentClick(e, product, index)}
+                        />
+                      );
+                    })}
+
+                    {/* Active Selected Dial Segment: Burgundy (#A32035) for PQFTL, Green (#007A48) for PQGTL */}
+                    {products.map((product, index) => {
+                      if (index !== selectedIndex) return null;
+                      return (
+                        <path
+                          key={`wedge-active-${product.id}`}
+                          d={buildSegmentWedgePath(index)}
+                          fill={activeAccentHex}
+                          stroke="#FFFFFF"
+                          strokeWidth="1.4"
+                          strokeOpacity="0.72"
+                          className="cursor-pointer"
+                          style={{
+                            transition:
+                              'fill 320ms cubic-bezier(0.16, 1, 0.3, 1), stroke-opacity 320ms ease',
+                          }}
+                          onClick={(e) => handleSegmentClick(e, product, index)}
+                        />
+                      );
+                    })}
+
                     {/* 5 Radial Division Ticks between products (like reference orange/gold dashes) */}
                     {products.map((product, index) => {
                       const divAngleDeg = index * stepAngle + stepAngle / 2;
@@ -520,12 +641,13 @@ export const TakafulWheel: React.FC<TakafulWheelProps> = ({
                           stroke="#F5B335"
                           strokeWidth="2.4"
                           strokeLinecap="round"
-                          strokeOpacity="0.9"
+                          strokeOpacity="0.92"
+                          className="pointer-events-none"
                         />
                       );
                     })}
 
-                    {/* Highlight Wedge Indicator behind Active Product on the Ring */}
+                    {/* Active Dot Indicator & Crisp Curved Product Labels */}
                     {products.map((product, index) => {
                       const isActive = index === selectedIndex;
                       const arcDeg = index * stepAngle;
@@ -537,16 +659,7 @@ export const TakafulWheel: React.FC<TakafulWheelProps> = ({
                         <g
                           key={product.id}
                           className="cursor-pointer"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (dragStateRef.current.totalMovedDeg < 8) {
-                              if (isActive) {
-                                onSelectProduct(product);
-                              } else {
-                                rotateToProductIndex(index);
-                              }
-                            }
-                          }}
+                          onClick={(e) => handleSegmentClick(e, product, index)}
                         >
                           {/* Transparent generous hit wedge */}
                           <circle
@@ -565,7 +678,7 @@ export const TakafulWheel: React.FC<TakafulWheelProps> = ({
                           )}
                           <text
                             fill="#FFFFFF"
-                            fillOpacity={isActive ? 1 : 0.82}
+                            fillOpacity={isActive ? 1 : 0.78}
                             fontSize={isActive ? '12.5' : '11.5'}
                             fontWeight={isActive ? '700' : '600'}
                             letterSpacing="0.06em"
@@ -601,7 +714,9 @@ export const TakafulWheel: React.FC<TakafulWheelProps> = ({
                       type="button"
                       data-hub-cta="true"
                       onClick={() => onSelectProduct(activeProduct)}
-                      className="pointer-events-auto mt-1.5 min-h-[28px] px-3 py-0.5 rounded-full bg-white text-[#007A48] hover:bg-[#F5B335] hover:text-[#1E2022] text-[10px] font-bold whitespace-nowrap transition-colors shadow-xs"
+                      className={`pointer-events-auto mt-1.5 min-h-[28px] px-3 py-0.5 rounded-full bg-white hover:bg-[#F5B335] hover:text-[#1E2022] text-[10px] font-bold whitespace-nowrap transition-colors duration-300 shadow-xs ${
+                        isFamily ? 'text-[#A32035]' : 'text-[#007A48]'
+                      }`}
                     >
                       Open Details
                     </button>
@@ -616,7 +731,11 @@ export const TakafulWheel: React.FC<TakafulWheelProps> = ({
                 type="button"
                 onClick={() => stepBy(-1)}
                 aria-label="Rotate dial anticlockwise to previous product"
-                className="min-h-[44px] min-w-[44px] rounded-xl border border-[#E5E7EB] bg-white flex items-center justify-center text-[#1E2022] hover:border-[#A32035] hover:text-[#A32035] transition-colors"
+                className={`min-h-[44px] min-w-[44px] rounded-xl border border-[#E5E7EB] bg-white flex items-center justify-center text-[#1E2022] transition-colors duration-300 ${
+                  isFamily
+                    ? 'hover:border-[#A32035] hover:text-[#A32035]'
+                    : 'hover:border-[#007A48] hover:text-[#007A48]'
+                }`}
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -624,8 +743,12 @@ export const TakafulWheel: React.FC<TakafulWheelProps> = ({
                 {products.map((p, idx) => (
                   <span
                     key={p.id}
-                    className={`h-1.5 rounded-full transition-all ${
-                      idx === selectedIndex ? 'w-5 bg-[#A32035]' : 'w-1.5 bg-[#D1D5DB]'
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      idx === selectedIndex
+                        ? isFamily
+                          ? 'w-5 bg-[#A32035]'
+                          : 'w-5 bg-[#007A48]'
+                        : 'w-1.5 bg-[#D1D5DB]'
                     }`}
                   />
                 ))}
@@ -634,7 +757,11 @@ export const TakafulWheel: React.FC<TakafulWheelProps> = ({
                 type="button"
                 onClick={() => stepBy(1)}
                 aria-label="Rotate dial clockwise to next product"
-                className="min-h-[44px] min-w-[44px] rounded-xl border border-[#E5E7EB] bg-white flex items-center justify-center text-[#1E2022] hover:border-[#A32035] hover:text-[#A32035] transition-colors"
+                className={`min-h-[44px] min-w-[44px] rounded-xl border border-[#E5E7EB] bg-white flex items-center justify-center text-[#1E2022] transition-colors duration-300 ${
+                  isFamily
+                    ? 'hover:border-[#A32035] hover:text-[#A32035]'
+                    : 'hover:border-[#007A48] hover:text-[#007A48]'
+                }`}
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -642,51 +769,72 @@ export const TakafulWheel: React.FC<TakafulWheelProps> = ({
           </div>
 
           {/* Synchronized Selected Product Details Card */}
-          <div className="lg:col-span-5 rounded-2xl border border-[#E5E7EB] bg-white p-5">
-            <div className="text-xs font-semibold text-[#007A48]">
-              {activeProduct.companyName}
-            </div>
-            <h3 className="text-lg font-bold text-[#1E2022] mt-1">{activeProduct.name}</h3>
-            <p className="text-sm text-[#5C6066] mt-2 leading-relaxed">
-              {activeProduct.shortTagline}
-            </p>
-
-            <div className="mt-4 pt-4 border-t border-[#E5E7EB] space-y-2.5">
-              <div>
-                <div className="text-[11px] font-semibold text-[#1E2022]">Primary Benefit</div>
-                <div className="text-xs text-[#5C6066] mt-0.5">{activeProduct.mainBenefit}</div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <div>
-                  <div className="text-[11px] text-[#5C6066]">Illustrative From</div>
-                  <div className="text-sm font-bold text-[#1E2022] tabular-nums">
-                    PKR {activeProduct.illustrativeMinContributionPkr.toLocaleString()}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[11px] text-[#5C6066]">Schedule</div>
-                  <div className="text-xs font-medium text-[#1E2022] mt-0.5">
-                    {activeProduct.illustrativeFrequency}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-5 flex flex-wrap gap-2.5">
-              <button
-                type="button"
-                onClick={() => onSelectProduct(activeProduct)}
-                className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl bg-[#A32035] hover:opacity-90 text-white text-sm font-medium whitespace-nowrap transition-opacity"
+          <div
+            className={`lg:col-span-5 rounded-2xl border bg-white p-5 transition-colors duration-300 ${
+              isFamily ? 'border-[#A32035]/25' : 'border-[#007A48]/25'
+            }`}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={`${entity}-${activeProduct.id}`}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.2, ease: PQ_EASE }}
               >
-                Explore Product Details
-              </button>
-            </div>
-            <p className="mt-3 text-[11px] text-[#5C6066]">
-              Illustrative product summary · Subject to official PMD terms.
-            </p>
+                <div
+                  className={`text-xs font-semibold transition-colors duration-300 ${
+                    isFamily ? 'text-[#A32035]' : 'text-[#007A48]'
+                  }`}
+                >
+                  {activeProduct.companyName}
+                </div>
+                <h3 className="text-lg font-bold text-[#1E2022] mt-1">{activeProduct.name}</h3>
+                <p className="text-sm text-[#5C6066] mt-2 leading-relaxed">
+                  {activeProduct.shortTagline}
+                </p>
+
+                <div className="mt-4 pt-4 border-t border-[#E5E7EB] space-y-2.5">
+                  <div>
+                    <div className="text-[11px] font-semibold text-[#1E2022]">Primary Benefit</div>
+                    <div className="text-xs text-[#5C6066] mt-0.5">{activeProduct.mainBenefit}</div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <div className="text-[11px] text-[#5C6066]">Illustrative From</div>
+                      <div className="text-sm font-bold text-[#1E2022] tabular-nums">
+                        PKR {activeProduct.illustrativeMinContributionPkr.toLocaleString()}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[11px] text-[#5C6066]">Schedule</div>
+                      <div className="text-xs font-medium text-[#1E2022] mt-0.5">
+                        {activeProduct.illustrativeFrequency}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 flex flex-wrap gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => onSelectProduct(activeProduct)}
+                    className={`flex-1 min-h-[44px] px-4 py-2.5 rounded-xl hover:opacity-90 text-white text-sm font-medium whitespace-nowrap transition-all duration-300 ${
+                      isFamily ? 'bg-[#A32035]' : 'bg-[#007A48]'
+                    }`}
+                  >
+                    Explore Product Details
+                  </button>
+                </div>
+                <p className="mt-3 text-[11px] text-[#5C6066]">
+                  Illustrative product summary · Subject to official PMD terms.
+                </p>
+              </motion.div>
+            </AnimatePresence>
           </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 };

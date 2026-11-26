@@ -31,7 +31,15 @@ import {
 } from '../types/pqfs';
 import { DEMO_CUSTOMER, TAKAFUL_PRODUCTS } from '../data/pqfsData';
 import { ProductIcon, TakafulWheel } from './TakafulWheel';
-import { PakQatarLogo, ProcessingOverlay } from './BrandAssets';
+import { ensureLoadingAssetsReady, PakQatarLogo, ProcessingOverlay } from './BrandAssets';
+import { ContributionCalculatorView } from './ContributionCalculatorView';
+import {
+  PqAccordionPanel,
+  PqModal,
+  PqStaggerGroup,
+  PqStaggerItem,
+  PqTabSwap,
+} from './MotionPrimitives';
 
 export type GuestHomeSection = 'overview' | 'calculator' | 'faqs';
 
@@ -71,12 +79,6 @@ export const GuestHomeView: React.FC<GuestHomeViewProps> = ({
 
   const compareA = TAKAFUL_PRODUCTS.find((p) => p.id === compareIds[0]) ?? TAKAFUL_PRODUCTS[0];
   const compareB = TAKAFUL_PRODUCTS.find((p) => p.id === compareIds[1]) ?? TAKAFUL_PRODUCTS[1];
-  const calcProduct = TAKAFUL_PRODUCTS.find((p) => p.id === calcProductId) ?? TAKAFUL_PRODUCTS[0];
-
-  const totalIllustrativeContribution =
-    calcProduct.entity === 'family' ? calcMonthlyPkr * 12 * calcYears : calcMonthlyPkr;
-  const illustrativeProjectionLow = Math.round(totalIllustrativeContribution * 1.18);
-  const illustrativeProjectionMid = Math.round(totalIllustrativeContribution * 1.38);
 
   const guestFaqs = [
     {
@@ -104,208 +106,96 @@ export const GuestHomeView: React.FC<GuestHomeViewProps> = ({
     }
   };
 
-  if (guestSection === 'calculator') {
-    return (
-      <div className="space-y-6 pb-10 max-w-2xl mx-auto">
-        <button
-          type="button"
-          onClick={() => onGuestSectionChange('overview')}
-          className="min-h-[44px] inline-flex items-center gap-2 text-sm font-medium text-[#5C6066] hover:text-[#A32035]"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Explore Plans</span>
-        </button>
+  const renderGuestContent = () => {
+    if (guestSection === 'calculator') {
+      return (
+        <ContributionCalculatorView
+          calcProductId={calcProductId}
+          onCalcProductIdChange={setCalcProductId}
+          calcMonthlyPkr={calcMonthlyPkr}
+          onCalcMonthlyPkrChange={setCalcMonthlyPkr}
+          calcYears={calcYears}
+          onCalcYearsChange={setCalcYears}
+          onBack={() => onGuestSectionChange('overview')}
+          onSelectProduct={onSelectProduct}
+          onStartApplication={onStartApplication}
+        />
+      );
+    }
 
-        <section className="rounded-3xl border border-[#E5E7EB] bg-white p-5 sm:p-6 shadow-xs">
-          <div className="flex items-center justify-between gap-2 mb-4">
-            <div>
-              <h1 className="text-xl font-bold text-[#1E2022]">Contribution Calculator</h1>
-              <p className="text-xs text-[#5C6066]">Illustrative demonstration estimator only</p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-[#EAF3EE] text-[#007A48] flex items-center justify-center">
-              <Calculator className="w-5 h-5" />
-            </div>
-          </div>
+    if (guestSection === 'faqs') {
+      return (
+        <div className="space-y-6 pb-10 max-w-3xl mx-auto">
+          <button
+            type="button"
+            onClick={() => onGuestSectionChange('overview')}
+            className="min-h-[44px] inline-flex items-center gap-2 text-sm font-medium text-[#5C6066] hover:text-[#A32035]"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Explore Plans</span>
+          </button>
 
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="calc-prod-tab" className="block text-xs font-semibold text-[#1E2022] mb-1">
-                Select Product
-              </label>
-              <select
-                id="calc-prod-tab"
-                value={calcProductId}
-                onChange={(e) => setCalcProductId(e.target.value)}
-                className="w-full min-h-[44px] px-3 rounded-xl border border-[#E5E7EB] bg-[#F7F5F2] text-xs font-medium text-[#1E2022]"
-              >
-                {TAKAFUL_PRODUCTS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({p.entity === 'family' ? 'PQFTL' : 'PQGTL'})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="font-semibold text-[#1E2022]">
-                  {calcProduct.entity === 'family' ? 'Monthly Contribution' : 'Annual Contribution'}
-                </span>
-                <span className="font-bold text-[#A32035] tabular-nums">
-                  PKR {calcMonthlyPkr.toLocaleString()}
-                </span>
-              </div>
-              <input
-                type="range"
-                min={3500}
-                max={50000}
-                step={500}
-                value={calcMonthlyPkr}
-                onChange={(e) => setCalcMonthlyPkr(Number(e.target.value))}
-                className="w-full accent-[#A32035]"
-              />
-            </div>
-
-            {calcProduct.entity === 'family' && (
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="font-semibold text-[#1E2022]">Illustrative Term</span>
-                  <span className="font-bold text-[#1E2022] tabular-nums">{calcYears} Years</span>
+          <section className="rounded-3xl border border-[#E5E7EB] bg-white p-5 sm:p-6">
+            <h1 className="text-xl font-bold text-[#1E2022] mb-1">Frequently Asked Questions</h1>
+            <p className="text-xs text-[#5C6066] mb-4">
+              Clear answers about Family Takaful, General Takaful, and our Shariah model.
+            </p>
+            <div className="divide-y divide-[#E5E7EB]">
+              {guestFaqs.map((item, idx) => (
+                <div key={item.q} className="py-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaqIdx(openFaqIdx === idx ? null : idx)}
+                    className="w-full min-h-[44px] flex items-center justify-between gap-3 text-left text-sm font-semibold text-[#1E2022]"
+                  >
+                    <span>{item.q}</span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-[#5C6066] shrink-0 transition-transform duration-200 ${
+                        openFaqIdx === idx ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+                  <PqAccordionPanel open={openFaqIdx === idx}>
+                    <p className="pb-2 text-xs text-[#5C6066] leading-relaxed">{item.a}</p>
+                  </PqAccordionPanel>
                 </div>
-                <input
-                  type="range"
-                  min={5}
-                  max={25}
-                  step={1}
-                  value={calcYears}
-                  onChange={(e) => setCalcYears(Number(e.target.value))}
-                  className="w-full accent-[#007A48]"
-                />
-              </div>
-            )}
+              ))}
+            </div>
+          </section>
 
-            <div className="p-4 rounded-2xl bg-[#EAF3EE] border border-[#007A48]/20">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[#5C6066]">Total Paid (Illustrative)</span>
-                <span className="font-bold text-[#1E2022] tabular-nums">
-                  PKR {totalIllustrativeContribution.toLocaleString()}
-                </span>
-              </div>
-              {calcProduct.isInvestmentLinked ? (
-                <div className="mt-2 pt-2 border-t border-[#007A48]/15 flex items-center justify-between text-xs">
-                  <span className="text-[#5C6066]">Illustrative Range (Non-Guaranteed)</span>
-                  <span className="font-bold text-[#007A48] tabular-nums">
-                    PKR {illustrativeProjectionLow.toLocaleString()} –{' '}
-                    {illustrativeProjectionMid.toLocaleString()}
-                  </span>
-                </div>
-              ) : (
-                <div className="mt-2 pt-2 border-t border-[#007A48]/15 text-xs text-[#5C6066]">
-                  Pure Waqf risk protection without investment accumulation.
-                </div>
-              )}
-              <p className="mt-2 text-[11px] text-[#5C6066]">
-                Demonstration figures do not represent guaranteed returns or official underwriting offers.
+          <section className="rounded-3xl border border-[#007A48]/20 bg-[#EAF3EE] p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="text-xs font-semibold text-[#007A48]">Shariah Transparency</div>
+              <h2 className="mt-1 text-base font-bold text-[#1E2022]">
+                Understand Waqf, Tabarru &amp; Wakalah
+              </h2>
+              <p className="mt-1 text-xs text-[#5C6066] max-w-lg">
+                Explore how cooperative participant funds are structured and reviewed under Shariah governance.
               </p>
             </div>
-
-            <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+            <div className="flex flex-wrap gap-2 shrink-0">
               <button
                 type="button"
-                onClick={() => onSelectProduct(calcProduct)}
-                className="flex-1 min-h-[46px] px-4 rounded-full border border-[#A32035] bg-white text-[#A32035] text-sm font-semibold"
+                onClick={onOpenShariah}
+                className="min-h-[44px] px-4 rounded-xl bg-[#007A48] hover:opacity-90 text-white text-xs font-semibold"
               >
-                View Plan Details
+                Open Shariah Centre
               </button>
               <button
                 type="button"
-                onClick={() => onStartApplication(calcProduct)}
-                className="flex-1 min-h-[46px] px-5 rounded-full bg-[#A32035] hover:opacity-90 text-white text-sm font-semibold flex items-center justify-between"
+                onClick={onOpenSupport}
+                className="min-h-[44px] px-4 rounded-xl bg-white border border-[#E5E7EB] text-xs font-semibold text-[#1E2022]"
               >
-                <span className="w-4" aria-hidden="true" />
-                <span>Start an Application</span>
-                <ChevronRight className="w-4 h-4" />
+                Contact Us
               </button>
             </div>
-          </div>
-        </section>
-      </div>
-    );
-  }
+          </section>
+        </div>
+      );
+    }
 
-  if (guestSection === 'faqs') {
     return (
-      <div className="space-y-6 pb-10 max-w-3xl mx-auto">
-        <button
-          type="button"
-          onClick={() => onGuestSectionChange('overview')}
-          className="min-h-[44px] inline-flex items-center gap-2 text-sm font-medium text-[#5C6066] hover:text-[#A32035]"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Explore Plans</span>
-        </button>
-
-        <section className="rounded-3xl border border-[#E5E7EB] bg-white p-5 sm:p-6">
-          <h1 className="text-xl font-bold text-[#1E2022] mb-1">Frequently Asked Questions</h1>
-          <p className="text-xs text-[#5C6066] mb-4">
-            Clear answers about Family Takaful, General Takaful, and our Shariah model.
-          </p>
-          <div className="divide-y divide-[#E5E7EB]">
-            {guestFaqs.map((item, idx) => (
-              <div key={item.q} className="py-2.5">
-                <button
-                  type="button"
-                  onClick={() => setOpenFaqIdx(openFaqIdx === idx ? null : idx)}
-                  className="w-full min-h-[44px] flex items-center justify-between gap-3 text-left text-sm font-semibold text-[#1E2022]"
-                >
-                  <span>{item.q}</span>
-                  <ChevronDown
-                    className={`w-4 h-4 text-[#5C6066] shrink-0 transition-transform ${
-                      openFaqIdx === idx ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
-                {openFaqIdx === idx && (
-                  <p className="pb-2 text-xs text-[#5C6066] leading-relaxed">{item.a}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-[#007A48]/20 bg-[#EAF3EE] p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="text-xs font-semibold text-[#007A48]">Shariah Transparency</div>
-            <h2 className="mt-1 text-base font-bold text-[#1E2022]">
-              Understand Waqf, Tabarru &amp; Wakalah
-            </h2>
-            <p className="mt-1 text-xs text-[#5C6066] max-w-lg">
-              Explore how cooperative participant funds are structured and reviewed under Shariah governance.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={onOpenShariah}
-              className="min-h-[44px] px-4 rounded-xl bg-[#007A48] hover:opacity-90 text-white text-xs font-semibold"
-            >
-              Open Shariah Centre
-            </button>
-            <button
-              type="button"
-              onClick={onOpenSupport}
-              className="min-h-[44px] px-4 rounded-xl bg-white border border-[#E5E7EB] text-xs font-semibold text-[#1E2022]"
-            >
-              Contact Us
-            </button>
-          </div>
-        </section>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-8 pb-8">
+      <div className="space-y-8 pb-8">
       {/* Screen 2 Reference Guest Home Hero + Action Menu List */}
       <section className="max-w-xl mx-auto lg:max-w-none">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -328,7 +218,7 @@ export const GuestHomeView: React.FC<GuestHomeViewProps> = ({
               <button
                 type="button"
                 onClick={() => scrollToElement('guest-360-wheel')}
-                className="w-full min-h-[56px] px-4 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#A32035] shadow-2xs flex items-center justify-between gap-3 transition-colors text-left"
+                className="pq-card-interactive w-full min-h-[56px] px-4 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#A32035] shadow-2xs flex items-center justify-between gap-3 transition-colors text-left"
               >
                 <span className="inline-flex items-center gap-3 min-w-0">
                   <ShieldCheck className="w-5 h-5 text-[#A32035] shrink-0" />
@@ -342,7 +232,7 @@ export const GuestHomeView: React.FC<GuestHomeViewProps> = ({
               <button
                 type="button"
                 onClick={() => scrollToElement('guest-compare')}
-                className="w-full min-h-[56px] px-4 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#A32035] shadow-2xs flex items-center justify-between gap-3 transition-colors text-left"
+                className="pq-card-interactive w-full min-h-[56px] px-4 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#A32035] shadow-2xs flex items-center justify-between gap-3 transition-colors text-left"
               >
                 <span className="inline-flex items-center gap-3 min-w-0">
                   <Scale className="w-5 h-5 text-[#A32035] shrink-0" />
@@ -356,7 +246,7 @@ export const GuestHomeView: React.FC<GuestHomeViewProps> = ({
               <button
                 type="button"
                 onClick={() => onGuestSectionChange('calculator')}
-                className="w-full min-h-[56px] px-4 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#A32035] shadow-2xs flex items-center justify-between gap-3 transition-colors text-left"
+                className="pq-card-interactive w-full min-h-[56px] px-4 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#A32035] shadow-2xs flex items-center justify-between gap-3 transition-colors text-left"
               >
                 <span className="inline-flex items-center gap-3 min-w-0">
                   <Calculator className="w-5 h-5 text-[#A32035] shrink-0" />
@@ -370,7 +260,7 @@ export const GuestHomeView: React.FC<GuestHomeViewProps> = ({
               <button
                 type="button"
                 onClick={() => onGuestSectionChange('faqs')}
-                className="w-full min-h-[56px] px-4 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#A32035] shadow-2xs flex items-center justify-between gap-3 transition-colors text-left"
+                className="pq-card-interactive w-full min-h-[56px] px-4 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#A32035] shadow-2xs flex items-center justify-between gap-3 transition-colors text-left"
               >
                 <span className="inline-flex items-center gap-3 min-w-0">
                   <HelpCircle className="w-5 h-5 text-[#A32035] shrink-0" />
@@ -384,7 +274,7 @@ export const GuestHomeView: React.FC<GuestHomeViewProps> = ({
               <button
                 type="button"
                 onClick={onOpenSupport}
-                className="w-full min-h-[56px] px-4 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#A32035] shadow-2xs flex items-center justify-between gap-3 transition-colors text-left"
+                className="pq-card-interactive w-full min-h-[56px] px-4 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#A32035] shadow-2xs flex items-center justify-between gap-3 transition-colors text-left"
               >
                 <span className="inline-flex items-center gap-3 min-w-0">
                   <Headphones className="w-5 h-5 text-[#A32035] shrink-0" />
@@ -423,16 +313,16 @@ export const GuestHomeView: React.FC<GuestHomeViewProps> = ({
             id="guest-360-wheel"
             className="lg:col-span-6 rounded-3xl border border-[#007A48]/20 bg-[#EAF3EE] p-5 sm:p-6 scroll-mt-16"
           >
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <div>
-                <h2 className="text-lg font-bold text-[#1E2022]">
-                  360° Rotating Takaful Selector
+            <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg font-bold text-[#A32035] text-balance">
+                  Explore Your Takaful Options
                 </h2>
-                <p className="text-xs text-[#5C6066]">
-                  Spin the dial to inspect Family (PQFTL) &amp; General (PQGTL) plans.
+                <p className="mt-1 text-xs text-[#5C6066] leading-relaxed max-w-lg">
+                  Discover a range of Family and General Takaful solutions designed to meet your protection and financial planning needs.
                 </p>
               </div>
-              <div className="flex gap-1.5">
+              <div className="flex gap-1.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => onWheelEntityChange('family')}
@@ -505,66 +395,68 @@ export const GuestHomeView: React.FC<GuestHomeViewProps> = ({
             </select>
           </div>
 
-          <div className="divide-y divide-[#E5E7EB] text-xs">
-            <div className="py-2.5 grid grid-cols-2 gap-3">
-              <div>
-                <div className="text-[#5C6066]">Company</div>
-                <div className="font-semibold text-[#1E2022] mt-0.5">
-                  {compareA.entity === 'family' ? 'PQFTL (Family)' : 'PQGTL (General)'}
+          <PqTabSwap swapKey={`${compareA.id}-${compareB.id}`}>
+            <div className="divide-y divide-[#E5E7EB] text-xs">
+              <div className="py-2.5 grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-[#5C6066]">Company</div>
+                  <div className="font-semibold text-[#1E2022] mt-0.5">
+                    {compareA.entity === 'family' ? 'PQFTL (Family)' : 'PQGTL (General)'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[#5C6066]">Company</div>
+                  <div className="font-semibold text-[#1E2022] mt-0.5">
+                    {compareB.entity === 'family' ? 'PQFTL (Family)' : 'PQGTL (General)'}
+                  </div>
                 </div>
               </div>
-              <div>
-                <div className="text-[#5C6066]">Company</div>
-                <div className="font-semibold text-[#1E2022] mt-0.5">
-                  {compareB.entity === 'family' ? 'PQFTL (Family)' : 'PQGTL (General)'}
+              <div className="py-2.5 grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-[#5C6066]">Illustrative From</div>
+                  <div className="font-bold text-[#A32035] tabular-nums mt-0.5">
+                    PKR {compareA.illustrativeMinContributionPkr.toLocaleString()}
+                  </div>
                 </div>
+                <div>
+                  <div className="text-[#5C6066]">Illustrative From</div>
+                  <div className="font-bold text-[#007A48] tabular-nums mt-0.5">
+                    PKR {compareB.illustrativeMinContributionPkr.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+              <div className="py-2.5 grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-[#5C6066]">Structure</div>
+                  <div className="font-medium text-[#1E2022] mt-0.5">
+                    {compareA.isInvestmentLinked ? 'Unit-Linked PIA' : 'Pure Waqf Risk Pool'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[#5C6066]">Structure</div>
+                  <div className="font-medium text-[#1E2022] mt-0.5">
+                    {compareB.isInvestmentLinked ? 'Unit-Linked PIA' : 'Pure Waqf Risk Pool'}
+                  </div>
+                </div>
+              </div>
+              <div className="pt-3 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => onSelectProduct(compareA)}
+                  className="min-h-[42px] rounded-xl border border-[#E5E7EB] hover:border-[#A32035] font-medium text-[#1E2022]"
+                >
+                  View Plan A
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSelectProduct(compareB)}
+                  className="min-h-[42px] rounded-xl border border-[#E5E7EB] hover:border-[#A32035] font-medium text-[#1E2022]"
+                >
+                  View Plan B
+                </button>
               </div>
             </div>
-            <div className="py-2.5 grid grid-cols-2 gap-3">
-              <div>
-                <div className="text-[#5C6066]">Illustrative From</div>
-                <div className="font-bold text-[#A32035] tabular-nums mt-0.5">
-                  PKR {compareA.illustrativeMinContributionPkr.toLocaleString()}
-                </div>
-              </div>
-              <div>
-                <div className="text-[#5C6066]">Illustrative From</div>
-                <div className="font-bold text-[#007A48] tabular-nums mt-0.5">
-                  PKR {compareB.illustrativeMinContributionPkr.toLocaleString()}
-                </div>
-              </div>
-            </div>
-            <div className="py-2.5 grid grid-cols-2 gap-3">
-              <div>
-                <div className="text-[#5C6066]">Structure</div>
-                <div className="font-medium text-[#1E2022] mt-0.5">
-                  {compareA.isInvestmentLinked ? 'Unit-Linked PIA' : 'Pure Waqf Risk Pool'}
-                </div>
-              </div>
-              <div>
-                <div className="text-[#5C6066]">Structure</div>
-                <div className="font-medium text-[#1E2022] mt-0.5">
-                  {compareB.isInvestmentLinked ? 'Unit-Linked PIA' : 'Pure Waqf Risk Pool'}
-                </div>
-              </div>
-            </div>
-            <div className="pt-3 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => onSelectProduct(compareA)}
-                className="min-h-[42px] rounded-xl border border-[#E5E7EB] hover:border-[#A32035] font-medium text-[#1E2022]"
-              >
-                View Plan A
-              </button>
-              <button
-                type="button"
-                onClick={() => onSelectProduct(compareB)}
-                className="min-h-[42px] rounded-xl border border-[#E5E7EB] hover:border-[#A32035] font-medium text-[#1E2022]"
-              >
-                View Plan B
-              </button>
-            </div>
-          </div>
+          </PqTabSwap>
         </section>
 
         <section className="lg:col-span-5 rounded-3xl border border-[#007A48]/20 bg-[#EAF3EE] p-5 sm:p-6 flex flex-col justify-between">
@@ -597,7 +489,10 @@ export const GuestHomeView: React.FC<GuestHomeViewProps> = ({
         </section>
       </div>
     </div>
-  );
+    );
+  };
+
+  return <PqTabSwap swapKey={guestSection}>{renderGuestContent()}</PqTabSwap>;
 };
 
 interface CustomerDashboardViewProps {
@@ -689,105 +584,113 @@ export const CustomerDashboardView: React.FC<CustomerDashboardViewProps> = ({
       </section>
 
       {/* Screen 7 Prominent Burgundy Hero Card: My Certificates */}
-      <button
-        type="button"
-        onClick={onOpenCertificatesList}
-        className="w-full text-left rounded-3xl bg-[#A32035] hover:opacity-95 p-5 sm:p-6 text-white flex items-center justify-between gap-4 transition-opacity shadow-xs"
-      >
-        <div className="flex items-center gap-4 min-w-0">
-          <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center shrink-0">
-            <FileText className="w-6 h-6 text-white" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-lg font-bold text-white">My Certificates</div>
-            <div className="text-xs text-white/90 mt-0.5">
-              {familyCerts.length} Family Takaful · {generalCerts.length} General Takaful Active
+      <PqStaggerGroup className="space-y-6">
+        <PqStaggerItem>
+          <button
+            type="button"
+            onClick={onOpenCertificatesList}
+            className="pq-card-interactive w-full text-left rounded-3xl bg-[#A32035] hover:opacity-95 p-5 sm:p-6 text-white flex items-center justify-between gap-4 transition-opacity shadow-xs"
+          >
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center shrink-0">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-lg font-bold text-white">My Certificates</div>
+                <div className="text-xs text-white/90 mt-0.5">
+                  {familyCerts.length} Family Takaful · {generalCerts.length} General Takaful Active
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <ChevronRight className="w-5 h-5 text-white shrink-0" />
-      </button>
+            <ChevronRight className="w-5 h-5 text-white shrink-0" />
+          </button>
+        </PqStaggerItem>
 
-      {/* Screen 7 Clean 2x2 Quick Action Tile Grid */}
-      <section aria-label="Customer Quick Services" className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-        <button
-          type="button"
-          onClick={onOpenInvestments}
-          className="min-h-[104px] p-4 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#A32035] flex flex-col items-center justify-center gap-2.5 text-center transition-colors"
-        >
-          <div className="w-10 h-10 rounded-xl bg-[#F7F5F2] text-[#A32035] flex items-center justify-center">
-            <Coins className="w-5 h-5" />
-          </div>
-          <span className="text-sm font-semibold text-[#1E2022]">Contributions</span>
-        </button>
+        {/* Screen 7 Clean 2x2 Quick Action Tile Grid */}
+        <PqStaggerItem>
+          <section aria-label="Customer Quick Services" className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+            <button
+              type="button"
+              onClick={onOpenInvestments}
+              className="pq-card-interactive min-h-[104px] p-4 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#A32035] flex flex-col items-center justify-center gap-2.5 text-center transition-colors"
+            >
+              <div className="w-10 h-10 rounded-xl bg-[#F7F5F2] text-[#A32035] flex items-center justify-center">
+                <Coins className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-semibold text-[#1E2022]">Contributions</span>
+            </button>
 
-        <button
-          type="button"
-          onClick={() => onNavigateTab('payments')}
-          className="min-h-[104px] p-4 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#A32035] flex flex-col items-center justify-center gap-2.5 text-center transition-colors"
-        >
-          <div className="w-10 h-10 rounded-xl bg-[#F7F5F2] text-[#A32035] flex items-center justify-center">
-            <CreditCard className="w-5 h-5" />
-          </div>
-          <span className="text-sm font-semibold text-[#1E2022]">Payments</span>
-        </button>
+            <button
+              type="button"
+              onClick={() => onNavigateTab('payments')}
+              className="pq-card-interactive min-h-[104px] p-4 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#A32035] flex flex-col items-center justify-center gap-2.5 text-center transition-colors"
+            >
+              <div className="w-10 h-10 rounded-xl bg-[#F7F5F2] text-[#A32035] flex items-center justify-center">
+                <CreditCard className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-semibold text-[#1E2022]">Payments</span>
+            </button>
 
-        <button
-          type="button"
-          onClick={() => onNavigateTab('claims')}
-          className="min-h-[104px] p-4 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#A32035] flex flex-col items-center justify-center gap-2.5 text-center transition-colors"
-        >
-          <div className="w-10 h-10 rounded-xl bg-[#F7F5F2] text-[#A32035] flex items-center justify-center">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <span className="text-sm font-semibold text-[#1E2022]">Claims</span>
-        </button>
+            <button
+              type="button"
+              onClick={() => onNavigateTab('claims')}
+              className="pq-card-interactive min-h-[104px] p-4 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#A32035] flex flex-col items-center justify-center gap-2.5 text-center transition-colors"
+            >
+              <div className="w-10 h-10 rounded-xl bg-[#F7F5F2] text-[#A32035] flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-semibold text-[#1E2022]">Claims</span>
+            </button>
 
-        <button
-          type="button"
-          onClick={onOpenSupport}
-          className="min-h-[104px] p-4 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#A32035] flex flex-col items-center justify-center gap-2.5 text-center transition-colors"
-        >
-          <div className="w-10 h-10 rounded-xl bg-[#F7F5F2] text-[#A32035] flex items-center justify-center">
-            <Headphones className="w-5 h-5" />
-          </div>
-          <span className="text-sm font-semibold text-[#1E2022]">Support</span>
-        </button>
-      </section>
+            <button
+              type="button"
+              onClick={onOpenSupport}
+              className="pq-card-interactive min-h-[104px] p-4 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#A32035] flex flex-col items-center justify-center gap-2.5 text-center transition-colors"
+            >
+              <div className="w-10 h-10 rounded-xl bg-[#F7F5F2] text-[#A32035] flex items-center justify-center">
+                <Headphones className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-semibold text-[#1E2022]">Support</span>
+            </button>
+          </section>
+        </PqStaggerItem>
 
-      {/* Screen 7 Subtle Light Green Need Help Card */}
-      <button
-        type="button"
-        onClick={onOpenSupport}
-        className="w-full text-left rounded-2xl bg-[#EAF3EE] border border-[#007A48]/20 hover:border-[#007A48] p-4 flex items-center justify-between gap-3 transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-white text-[#007A48] flex items-center justify-center shrink-0">
-            <Shield className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-sm font-bold text-[#1E2022]">Need Help?</div>
-            <div className="text-xs text-[#5C6066]">Contact Us · UAN, Branches &amp; Tickets</div>
-          </div>
-        </div>
-        <ChevronRight className="w-4 h-4 text-[#007A48] shrink-0" />
-      </button>
-
-      {/* Strictly Separated Company Portfolios: PQFTL vs PQGTL */}
-      <section aria-label="Separated Takaful Portfolios">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-bold text-[#1E2022]">Separated Company Portfolios</h2>
-          <span className="text-[11px] text-[#5C6066]">PQFTL &amp; PQGTL kept distinct</span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Family Takaful (PQFTL) */}
-          <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-[#A32035]">Family Takaful · PQFTL</span>
-              <span className="text-xs font-medium text-[#5C6066] tabular-nums">
-                {familyCerts.length} Active Certificates
-              </span>
+        {/* Screen 7 Subtle Light Green Need Help Card */}
+        <PqStaggerItem>
+          <button
+            type="button"
+            onClick={onOpenSupport}
+            className="pq-card-interactive w-full text-left rounded-2xl bg-[#EAF3EE] border border-[#007A48]/20 hover:border-[#007A48] p-4 flex items-center justify-between gap-3 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white text-[#007A48] flex items-center justify-center shrink-0">
+                <Shield className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-sm font-bold text-[#1E2022]">Need Help?</div>
+                <div className="text-xs text-[#5C6066]">Contact Us · UAN, Branches &amp; Tickets</div>
+              </div>
             </div>
+            <ChevronRight className="w-4 h-4 text-[#007A48] shrink-0" />
+          </button>
+        </PqStaggerItem>
+
+        {/* Strictly Separated Company Portfolios: PQFTL vs PQGTL */}
+        <PqStaggerItem>
+          <section aria-label="Separated Takaful Portfolios">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-bold text-[#1E2022]">Separated Company Portfolios</h2>
+              <span className="text-[11px] text-[#5C6066]">PQFTL &amp; PQGTL kept distinct</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Family Takaful (PQFTL) */}
+              <div className="pq-card-interactive rounded-2xl border border-[#E5E7EB] bg-white p-5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#A32035]">Family Takaful · PQFTL</span>
+                  <span className="text-xs font-medium text-[#5C6066] tabular-nums">
+                    {familyCerts.length} Active Certificates
+                  </span>
+                </div>
             <div className="mt-4 grid grid-cols-2 gap-4">
               <div>
                 <div className="text-[11px] text-[#5C6066]">Participant Investment Account</div>
@@ -823,7 +726,7 @@ export const CustomerDashboardView: React.FC<CustomerDashboardViewProps> = ({
           </div>
 
           {/* General Takaful (PQGTL) */}
-          <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5">
+          <div className="pq-card-interactive rounded-2xl border border-[#E5E7EB] bg-white p-5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-[#007A48]">General Takaful · PQGTL</span>
               <span className="text-xs font-medium text-[#5C6066] tabular-nums">
@@ -869,10 +772,12 @@ export const CustomerDashboardView: React.FC<CustomerDashboardViewProps> = ({
           </div>
         </div>
       </section>
+      </PqStaggerItem>
 
       {/* Next Due Date & Recent Activity */}
+      <PqStaggerItem>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        <div className="lg:col-span-5 rounded-2xl border border-[#E5E7EB] bg-white p-5">
+        <div className="pq-card-interactive lg:col-span-5 rounded-2xl border border-[#E5E7EB] bg-white p-5">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold text-[#1E2022]">Next Contribution Due</h2>
             {nextDue && (
@@ -965,47 +870,52 @@ export const CustomerDashboardView: React.FC<CustomerDashboardViewProps> = ({
           )}
         </div>
       </div>
+      </PqStaggerItem>
+      </PqStaggerGroup>
 
       {/* Notifications Drawer/Modal */}
-      {notifOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 border border-[#E5E7EB] max-h-[82vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
-              <h3 className="text-base font-bold text-[#1E2022]">Notifications</h3>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={onMarkAllRead}
-                  className="text-xs font-medium text-[#A32035]"
-                >
-                  Mark all read
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNotifOpen(false)}
-                  className="min-h-[36px] px-2.5 text-xs font-medium text-[#5C6066]"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-            <div className="divide-y divide-[#E5E7EB]">
-              {notifications.map((n) => (
-                <div key={n.id} className="py-3.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-[#1E2022]">{n.title}</span>
-                    {!n.read && (
-                      <span className="text-[10px] font-semibold text-[#A32035]">Unread</span>
-                    )}
-                  </div>
-                  <p className="text-xs text-[#5C6066] mt-1">{n.detail}</p>
-                  <div className="text-[11px] text-[#5C6066] mt-1">{n.timestamp}</div>
-                </div>
-              ))}
+      <PqModal
+        open={notifOpen}
+        onClose={() => setNotifOpen(false)}
+        variant="sheet"
+        ariaLabel="Notifications"
+      >
+        <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 border border-[#E5E7EB] max-h-[82vh] overflow-y-auto shadow-xl">
+          <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
+            <h3 className="text-base font-bold text-[#1E2022]">Notifications</h3>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onMarkAllRead}
+                className="text-xs font-medium text-[#A32035]"
+              >
+                Mark all read
+              </button>
+              <button
+                type="button"
+                onClick={() => setNotifOpen(false)}
+                className="min-h-[36px] px-2.5 text-xs font-medium text-[#5C6066]"
+              >
+                Close
+              </button>
             </div>
           </div>
+          <div className="divide-y divide-[#E5E7EB]">
+            {notifications.map((n) => (
+              <div key={n.id} className="py-3.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-[#1E2022]">{n.title}</span>
+                  {!n.read && (
+                    <span className="text-[10px] font-semibold text-[#A32035]">Unread</span>
+                  )}
+                </div>
+                <p className="text-xs text-[#5C6066] mt-1">{n.detail}</p>
+                <div className="text-[11px] text-[#5C6066] mt-1">{n.timestamp}</div>
+              </div>
+            ))}
+          </div>
         </div>
-      )}
+      </PqModal>
     </div>
   );
 };
@@ -1223,7 +1133,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   key={doc}
                   type="button"
                   onClick={() => setDocPreview(doc)}
-                  className="w-full min-h-[42px] px-3 py-2 rounded-xl border border-[#E5E7EB] hover:border-[#A32035] flex items-center justify-between text-xs font-medium text-[#1E2022]"
+                  className="pq-card-interactive w-full min-h-[42px] px-3 py-2 rounded-xl border border-[#E5E7EB] hover:border-[#A32035] flex items-center justify-between text-xs font-medium text-[#1E2022]"
                 >
                   <span className="inline-flex items-center gap-2">
                     <FileText className="w-4 h-4 text-[#A32035]" />
@@ -1258,23 +1168,25 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
         </div>
       </div>
 
-      {docPreview && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 border border-[#E5E7EB] shadow-lg">
-            <h3 className="text-base font-bold text-[#1E2022]">{docPreview}</h3>
-            <p className="mt-2 text-xs text-[#5C6066] leading-relaxed">
-              This is an illustrative document summary for {product.name} ({product.companyName}). Official Participant Membership Documents (PMD) and Shariah certificates are issued by Pak-Qatar upon formal underwriting approval.
-            </p>
-            <button
-              type="button"
-              onClick={() => setDocPreview(null)}
-              className="mt-5 w-full min-h-[44px] rounded-xl bg-[#A32035] text-white text-sm font-medium"
-            >
-              Close Preview
-            </button>
-          </div>
+      <PqModal
+        open={Boolean(docPreview)}
+        onClose={() => setDocPreview(null)}
+        ariaLabel={docPreview ?? 'Document Preview'}
+      >
+        <div className="bg-white rounded-3xl max-w-md w-full p-6 border border-[#E5E7EB] shadow-lg">
+          <h3 className="text-base font-bold text-[#1E2022]">{docPreview}</h3>
+          <p className="mt-2 text-xs text-[#5C6066] leading-relaxed">
+            This is an illustrative document summary for {product.name} ({product.companyName}). Official Participant Membership Documents (PMD) and Shariah certificates are issued by Pak-Qatar upon formal underwriting approval.
+          </p>
+          <button
+            type="button"
+            onClick={() => setDocPreview(null)}
+            className="mt-5 w-full min-h-[44px] rounded-xl bg-[#A32035] text-white text-sm font-medium"
+          >
+            Close Preview
+          </button>
         </div>
-      )}
+      </PqModal>
     </div>
   );
 };
@@ -1308,16 +1220,19 @@ export const ProductApplicationFlow: React.FC<ProductApplicationFlowProps> = ({
   const [appRef, setAppRef] = useState('');
 
   const handleConfirm = () => {
-    setProcessing(true);
-    window.setTimeout(() => {
-      const ref = `${product.entity === 'family' ? 'APP-PQF' : 'APP-PQG'}-2026-${Math.floor(
-        1000 + Math.random() * 9000
-      )}`;
-      setAppRef(ref);
-      setProcessing(false);
-      setStep('done');
-      onSubmitted(ref);
-    }, 1500);
+    if (processing) return;
+    void ensureLoadingAssetsReady().then(() => {
+      setProcessing(true);
+      window.setTimeout(() => {
+        const ref = `${product.entity === 'family' ? 'APP-PQF' : 'APP-PQG'}-2026-${Math.floor(
+          1000 + Math.random() * 9000
+        )}`;
+        setAppRef(ref);
+        setProcessing(false);
+        setStep('done');
+        onSubmitted(ref);
+      }, 2000);
+    });
   };
 
   return (
@@ -1345,137 +1260,139 @@ export const ProductApplicationFlow: React.FC<ProductApplicationFlowProps> = ({
           {step === 'done' ? 'Application Submitted (Demo)' : `Apply: ${product.name}`}
         </h1>
 
-        {step === 'form' && (
-          <div className="mt-5 space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-[#1E2022] mb-1">
-                Applicant Full Name <span className="text-[#A32035]">*</span>
-              </label>
-              <input
-                type="text"
-                value={applicantName}
-                onChange={(e) => setApplicantName(e.target.value)}
-                className="w-full min-h-[44px] px-3.5 rounded-xl border border-[#E5E7EB] text-sm"
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <PqTabSwap swapKey={step}>
+          {step === 'form' && (
+            <div className="mt-5 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[#1E2022] mb-1">City</label>
-                <select
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  className="w-full min-h-[44px] px-3 rounded-xl border border-[#E5E7EB] text-sm bg-white"
-                >
-                  <option>Karachi</option>
-                  <option>Lahore</option>
-                  <option>Islamabad</option>
-                  <option>Rawalpindi</option>
-                  <option>Multan</option>
-                </select>
+                <label className="block text-xs font-semibold text-[#1E2022] mb-1">
+                  Applicant Full Name <span className="text-[#A32035]">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={applicantName}
+                  onChange={(e) => setApplicantName(e.target.value)}
+                  className="w-full min-h-[44px] px-3.5 rounded-xl border border-[#E5E7EB] text-sm"
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#1E2022] mb-1">City</label>
+                  <select
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="w-full min-h-[44px] px-3 rounded-xl border border-[#E5E7EB] text-sm bg-white"
+                  >
+                    <option>Karachi</option>
+                    <option>Lahore</option>
+                    <option>Islamabad</option>
+                    <option>Rawalpindi</option>
+                    <option>Multan</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#1E2022] mb-1">
+                    Illustrative Contribution (PKR)
+                  </label>
+                  <input
+                    type="number"
+                    min={product.illustrativeMinContributionPkr}
+                    value={contributionPkr}
+                    onChange={(e) => setContributionPkr(e.target.value)}
+                    className="w-full min-h-[44px] px-3.5 rounded-xl border border-[#E5E7EB] text-sm tabular-nums"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-[#1E2022] mb-1">
-                  Illustrative Contribution (PKR)
+                  {product.entity === 'family' ? 'Beneficiary / Nominee' : 'Asset / Risk Description'}
                 </label>
                 <input
-                  type="number"
-                  min={product.illustrativeMinContributionPkr}
-                  value={contributionPkr}
-                  onChange={(e) => setContributionPkr(e.target.value)}
-                  className="w-full min-h-[44px] px-3.5 rounded-xl border border-[#E5E7EB] text-sm tabular-nums"
+                  type="text"
+                  value={nomineeOrAsset}
+                  onChange={(e) => setNomineeOrAsset(e.target.value)}
+                  className="w-full min-h-[44px] px-3.5 rounded-xl border border-[#E5E7EB] text-sm"
                 />
               </div>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-[#1E2022] mb-1">
-                {product.entity === 'family' ? 'Beneficiary / Nominee' : 'Asset / Risk Description'}
-              </label>
-              <input
-                type="text"
-                value={nomineeOrAsset}
-                onChange={(e) => setNomineeOrAsset(e.target.value)}
-                className="w-full min-h-[44px] px-3.5 rounded-xl border border-[#E5E7EB] text-sm"
-              />
-            </div>
-            <label className="flex items-start gap-2.5 text-xs text-[#5C6066] cursor-pointer">
-              <input
-                type="checkbox"
-                checked={declared}
-                onChange={(e) => setDeclared(e.target.checked)}
-                className="mt-0.5 accent-[#A32035] w-4 h-4"
-              />
-              <span>
-                I acknowledge this is an illustrative demonstration application and does not issue an active Takaful certificate without formal underwriting.
-              </span>
-            </label>
-            <button
-              type="button"
-              disabled={!declared || !applicantName.trim()}
-              onClick={() => setStep('review')}
-              className="w-full min-h-[48px] rounded-xl bg-[#A32035] hover:opacity-90 disabled:opacity-50 text-white text-sm font-medium transition-opacity"
-            >
-              Review Application
-            </button>
-          </div>
-        )}
-
-        {step === 'review' && (
-          <div className="mt-5 space-y-4">
-            <div className="rounded-2xl bg-[#F7F5F2] border border-[#E5E7EB] p-4 space-y-2.5 text-xs">
-              <div className="flex justify-between">
-                <span className="text-[#5C6066]">Product</span>
-                <span className="font-semibold text-[#1E2022]">{product.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#5C6066]">Applicant</span>
-                <span className="font-semibold text-[#1E2022]">{applicantName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#5C6066]">City</span>
-                <span className="font-semibold text-[#1E2022]">{city}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#5C6066]">Illustrative Contribution</span>
-                <span className="font-bold text-[#A32035] tabular-nums">
-                  PKR {Number(contributionPkr || 0).toLocaleString()}
+              <label className="flex items-start gap-2.5 text-xs text-[#5C6066] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={declared}
+                  onChange={(e) => setDeclared(e.target.checked)}
+                  className="mt-0.5 accent-[#A32035] w-4 h-4"
+                />
+                <span>
+                  I acknowledge this is an illustrative demonstration application and does not issue an active Takaful certificate without formal underwriting.
                 </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#5C6066]">Nominee / Asset</span>
-                <span className="font-semibold text-[#1E2022]">{nomineeOrAsset}</span>
-              </div>
+              </label>
+              <button
+                type="button"
+                disabled={!declared || !applicantName.trim()}
+                onClick={() => setStep('review')}
+                className="w-full min-h-[48px] rounded-xl bg-[#A32035] hover:opacity-90 disabled:opacity-50 text-white text-sm font-medium transition-opacity"
+              >
+                Review Application
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={handleConfirm}
-              className="w-full min-h-[48px] rounded-xl bg-[#A32035] hover:opacity-90 text-white text-sm font-medium transition-opacity"
-            >
-              Confirm &amp; Submit Demo Application
-            </button>
-          </div>
-        )}
+          )}
 
-        {step === 'done' && (
-          <div className="mt-5 text-center py-2">
-            <div className="w-14 h-14 mx-auto rounded-full bg-[#EAF3EE] text-[#007A48] flex items-center justify-center">
-              <CheckCircle2 className="w-8 h-8" />
+          {step === 'review' && (
+            <div className="mt-5 space-y-4">
+              <div className="rounded-2xl bg-[#F7F5F2] border border-[#E5E7EB] p-4 space-y-2.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-[#5C6066]">Product</span>
+                  <span className="font-semibold text-[#1E2022]">{product.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#5C6066]">Applicant</span>
+                  <span className="font-semibold text-[#1E2022]">{applicantName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#5C6066]">City</span>
+                  <span className="font-semibold text-[#1E2022]">{city}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#5C6066]">Illustrative Contribution</span>
+                  <span className="font-bold text-[#A32035] tabular-nums">
+                    PKR {Number(contributionPkr || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#5C6066]">Nominee / Asset</span>
+                  <span className="font-semibold text-[#1E2022]">{nomineeOrAsset}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleConfirm}
+                className="w-full min-h-[48px] rounded-xl bg-[#A32035] hover:opacity-90 text-white text-sm font-medium transition-opacity"
+              >
+                Confirm &amp; Submit Demo Application
+              </button>
             </div>
-            <p className="mt-3 text-sm text-[#5C6066]">
-              Your demonstration proposal request has been logged for consultant &amp; underwriting follow-up.
-            </p>
-            <div className="mt-4 p-3.5 rounded-xl bg-[#F7F5F2] border border-[#E5E7EB] text-xs">
-              Reference Number:{' '}
-              <span className="font-bold text-[#1E2022] tabular-nums">{appRef}</span>
+          )}
+
+          {step === 'done' && (
+            <div className="mt-5 text-center py-2">
+              <div className="w-14 h-14 mx-auto rounded-full bg-[#EAF3EE] text-[#007A48] flex items-center justify-center">
+                <CheckCircle2 className="w-8 h-8" />
+              </div>
+              <p className="mt-3 text-sm text-[#5C6066]">
+                Your demonstration proposal request has been logged for consultant &amp; underwriting follow-up.
+              </p>
+              <div className="mt-4 p-3.5 rounded-xl bg-[#F7F5F2] border border-[#E5E7EB] text-xs">
+                Reference Number:{' '}
+                <span className="font-bold text-[#1E2022] tabular-nums">{appRef}</span>
+              </div>
+              <button
+                type="button"
+                onClick={onBack}
+                className="mt-6 w-full min-h-[48px] rounded-xl bg-[#A32035] text-white text-sm font-medium"
+              >
+                Return to Products
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={onBack}
-              className="mt-6 w-full min-h-[48px] rounded-xl bg-[#A32035] text-white text-sm font-medium"
-            >
-              Return to Products
-            </button>
-          </div>
-        )}
+          )}
+        </PqTabSwap>
       </div>
     </div>
   );

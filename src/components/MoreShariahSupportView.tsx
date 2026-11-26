@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   ArrowLeft,
   BadgeCheck,
@@ -27,6 +28,7 @@ import {
   PQFS_VERIFIED_CONTACT,
   SHARIAH_MODULES,
 } from '../data/pqfsData';
+import { PQ_EASE, PqTabSwap } from './MotionPrimitives';
 
 interface MoreViewProps {
   isAuthenticated: boolean;
@@ -97,9 +99,10 @@ export const MoreShariahSupportView: React.FC<MoreViewProps> = ({
     setCompMessage('');
   };
 
-  if (subSection === 'shariah') {
-    return (
-      <div className="space-y-6 pb-8">
+  const renderSection = () => {
+    if (subSection === 'shariah') {
+      return (
+        <div className="space-y-6 pb-8">
         <button
           type="button"
           onClick={() => onSubSectionChange('hub')}
@@ -165,24 +168,28 @@ export const MoreShariahSupportView: React.FC<MoreViewProps> = ({
           </div>
 
           <div className="lg:col-span-7 rounded-3xl border border-[#E5E7EB] bg-white p-6">
-            <div className="text-xs font-semibold text-[#007A48]">Educational Guide</div>
-            <h2 className="mt-1 text-xl font-bold text-[#1E2022]">{activeShariah.title}</h2>
-            <p className="mt-2.5 text-sm text-[#5C6066] leading-relaxed">{activeShariah.summary}</p>
-            <ul className="mt-4 space-y-2 text-xs text-[#1E2022]">
-              {activeShariah.keyPoints.map((pt) => (
-                <li key={pt} className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#007A48] shrink-0 mt-0.5" />
-                  <span>{pt}</span>
-                </li>
-              ))}
-            </ul>
+            <PqTabSwap swapKey={activeShariah.id}>
+              <div>
+                <div className="text-xs font-semibold text-[#007A48]">Educational Guide</div>
+                <h2 className="mt-1 text-xl font-bold text-[#1E2022]">{activeShariah.title}</h2>
+                <p className="mt-2.5 text-sm text-[#5C6066] leading-relaxed">{activeShariah.summary}</p>
+                <ul className="mt-4 space-y-2 text-xs text-[#1E2022]">
+                  {activeShariah.keyPoints.map((pt) => (
+                    <li key={pt} className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-[#007A48] shrink-0 mt-0.5" />
+                      <span>{pt}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </PqTabSwap>
           </div>
         </div>
       </div>
     );
-  }
+    }
 
-  if (subSection === 'support') {
+    if (subSection === 'support') {
     return (
       <div className="space-y-6 pb-8">
         <button
@@ -261,11 +268,19 @@ export const MoreShariahSupportView: React.FC<MoreViewProps> = ({
               placeholder="Provide details (demo submission)..."
               className="w-full p-3 rounded-xl border border-[#E5E7EB] text-xs"
             />
-            {compSubmittedRef && (
-              <p className="text-xs font-semibold text-[#007A48]">
-                Demo Ticket Logged: {compSubmittedRef}
-              </p>
-            )}
+            <AnimatePresence>
+              {compSubmittedRef && (
+                <motion.p
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.22, ease: PQ_EASE }}
+                  className="text-xs font-semibold text-[#007A48]"
+                >
+                  Demo Ticket Logged: {compSubmittedRef}
+                </motion.p>
+              )}
+            </AnimatePresence>
             <button
               type="submit"
               className="w-full min-h-[44px] rounded-xl bg-[#A32035] text-white text-xs font-medium"
@@ -311,24 +326,40 @@ export const MoreShariahSupportView: React.FC<MoreViewProps> = ({
                   Verify
                 </button>
               </div>
-              {agentResult ? (
-                <div className="p-3 rounded-xl bg-[#F6F6F7] border border-[#E5E7EB] text-xs space-y-1">
-                  <div className="font-bold text-[#1E2022] inline-flex items-center gap-1.5">
-                    <BadgeCheck className="w-4 h-4 text-[#007A48]" />
-                    <span>{agentResult.name}</span>
-                  </div>
-                  <div className="text-[#5C6066]">
-                    {agentResult.entity} · {agentResult.region}
-                  </div>
-                  <div className="text-[#007A48] font-medium">{agentResult.status}</div>
-                </div>
-              ) : (
-                agentChecked && (
-                  <div className="text-xs text-[#A32035] font-medium">
-                    No matching consultant found in demonstration registry.
-                  </div>
-                )
-              )}
+              <AnimatePresence mode="wait">
+                {agentResult ? (
+                  <motion.div
+                    key={agentResult.code}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.22, ease: PQ_EASE }}
+                    className="p-3 rounded-xl bg-[#F6F6F7] border border-[#E5E7EB] text-xs space-y-1"
+                  >
+                    <div className="font-bold text-[#1E2022] inline-flex items-center gap-1.5">
+                      <BadgeCheck className="w-4 h-4 text-[#007A48]" />
+                      <span>{agentResult.name}</span>
+                    </div>
+                    <div className="text-[#5C6066]">
+                      {agentResult.entity} · {agentResult.region}
+                    </div>
+                    <div className="text-[#007A48] font-medium">{agentResult.status}</div>
+                  </motion.div>
+                ) : (
+                  agentChecked && (
+                    <motion.div
+                      key="not-found"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.22, ease: PQ_EASE }}
+                      className="text-xs text-[#A32035] font-medium"
+                    >
+                      No matching consultant found in demonstration registry.
+                    </motion.div>
+                  )
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Branch Directory */}
@@ -351,86 +382,86 @@ export const MoreShariahSupportView: React.FC<MoreViewProps> = ({
         </div>
       </div>
     );
-  }
+    }
 
-  if (subSection === 'services') {
+    if (subSection === 'services') {
+      return (
+        <div className="space-y-6 pb-8">
+          <button
+            type="button"
+            onClick={() => onSubSectionChange('hub')}
+            className="min-h-[44px] inline-flex items-center gap-2 text-sm font-medium text-[#5C6066] hover:text-[#A32035]"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to More</span>
+          </button>
+
+          <div>
+            <h1 className="text-2xl font-bold text-[#1E2022]">PQFS Services Transparency Map</h1>
+            <p className="text-xs text-[#5C6066] mt-0.5">
+              Distinguishing existing PQFS digital portal services from proposed mobile application capabilities.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-[#E5E7EB] bg-white divide-y divide-[#E5E7EB]">
+            {EXISTING_VS_PROPOSED_SERVICES.map((row) => (
+              <div key={row.service} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <span className="font-bold text-[#1E2022]">{row.service}</span>
+                <span className="font-medium text-[#007A48]">{row.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // Main More Hub
     return (
       <div className="space-y-6 pb-8">
-        <button
-          type="button"
-          onClick={() => onSubSectionChange('hub')}
-          className="min-h-[44px] inline-flex items-center gap-2 text-sm font-medium text-[#5C6066] hover:text-[#A32035]"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to More</span>
-        </button>
-
         <div>
-          <h1 className="text-2xl font-bold text-[#1E2022]">PQFS Services Transparency Map</h1>
+          <h1 className="text-2xl font-bold text-[#1E2022]">More, Shariah & Support</h1>
           <p className="text-xs text-[#5C6066] mt-0.5">
-            Distinguishing existing PQFS digital portal services from proposed mobile application capabilities.
+            Shariah governance education, official support services, and privacy preferences.
           </p>
         </div>
 
-        <div className="rounded-2xl border border-[#E5E7EB] bg-white divide-y divide-[#E5E7EB]">
-          {EXISTING_VS_PROPOSED_SERVICES.map((row) => (
-            <div key={row.service} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-              <span className="font-bold text-[#1E2022]">{row.service}</span>
-              <span className="font-medium text-[#007A48]">{row.status}</span>
-            </div>
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button
+            type="button"
+            onClick={() => onSubSectionChange('shariah')}
+            className="pq-card-interactive text-left p-5 rounded-2xl border border-[#E5E7EB] bg-white hover:border-[#007A48] transition-colors"
+          >
+            <Scale className="w-6 h-6 text-[#007A48]" />
+            <h2 className="mt-3 text-base font-bold text-[#1E2022]">Shariah Centre</h2>
+            <p className="mt-1 text-xs text-[#5C6066]">
+              Explore Waqf, Tabarru, Wakalah, and Shariah governance principles.
+            </p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onSubSectionChange('support')}
+            className="pq-card-interactive text-left p-5 rounded-2xl border border-[#E5E7EB] bg-white hover:border-[#A32035] transition-colors"
+          >
+            <Headphones className="w-6 h-6 text-[#A32035]" />
+            <h2 className="mt-3 text-base font-bold text-[#1E2022]">Customer Support</h2>
+            <p className="mt-1 text-xs text-[#5C6066]">
+              Helpline, WhatsApp self-service, complaints, branches, and agent lookup.
+            </p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onSubSectionChange('services')}
+            className="pq-card-interactive text-left p-5 rounded-2xl border border-[#E5E7EB] bg-white hover:border-[#A32035] transition-colors"
+          >
+            <Building className="w-6 h-6 text-[#F5B335]" />
+            <h2 className="mt-3 text-base font-bold text-[#1E2022]">PQFS Services Map</h2>
+            <p className="mt-1 text-xs text-[#5C6066]">
+              Compare existing PQFS portal services with proposed mobile capabilities.
+            </p>
+          </button>
         </div>
-      </div>
-    );
-  }
-
-  // Main More Hub
-  return (
-    <div className="space-y-6 pb-8">
-      <div>
-        <h1 className="text-2xl font-bold text-[#1E2022]">More, Shariah & Support</h1>
-        <p className="text-xs text-[#5C6066] mt-0.5">
-          Shariah governance education, official support services, and privacy preferences.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <button
-          type="button"
-          onClick={() => onSubSectionChange('shariah')}
-          className="text-left p-5 rounded-2xl border border-[#E5E7EB] bg-white hover:border-[#007A48] transition-colors"
-        >
-          <Scale className="w-6 h-6 text-[#007A48]" />
-          <h2 className="mt-3 text-base font-bold text-[#1E2022]">Shariah Centre</h2>
-          <p className="mt-1 text-xs text-[#5C6066]">
-            Explore Waqf, Tabarru, Wakalah, and Shariah governance principles.
-          </p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onSubSectionChange('support')}
-          className="text-left p-5 rounded-2xl border border-[#E5E7EB] bg-white hover:border-[#A32035] transition-colors"
-        >
-          <Headphones className="w-6 h-6 text-[#A32035]" />
-          <h2 className="mt-3 text-base font-bold text-[#1E2022]">Customer Support</h2>
-          <p className="mt-1 text-xs text-[#5C6066]">
-            Helpline, WhatsApp self-service, complaints, branches, and agent lookup.
-          </p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onSubSectionChange('services')}
-          className="text-left p-5 rounded-2xl border border-[#E5E7EB] bg-white hover:border-[#A32035] transition-colors"
-        >
-          <Building className="w-6 h-6 text-[#F5B335]" />
-          <h2 className="mt-3 text-base font-bold text-[#1E2022]">PQFS Services Map</h2>
-          <p className="mt-1 text-xs text-[#5C6066]">
-            Compare existing PQFS portal services with proposed mobile capabilities.
-          </p>
-        </button>
-      </div>
 
       {/* Security & Preferences */}
       <section className="rounded-2xl border border-[#E5E7EB] bg-white divide-y divide-[#E5E7EB]">
@@ -549,5 +580,8 @@ export const MoreShariahSupportView: React.FC<MoreViewProps> = ({
         </div>
       </section>
     </div>
-  );
+    );
+  };
+
+  return <PqTabSwap swapKey={subSection}>{renderSection()}</PqTabSwap>;
 };

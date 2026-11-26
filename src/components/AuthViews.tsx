@@ -18,6 +18,7 @@ import {
 import { LanguageCode } from '../types/pqfs';
 import { DEMO_CUSTOMER, PQFS_VERIFIED_CONTACT } from '../data/pqfsData';
 import { PakQatarLogo } from './BrandAssets';
+import { PqTabSwap } from './MotionPrimitives';
 
 interface WelcomeViewProps {
   language: LanguageCode;
@@ -149,12 +150,51 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
         </div>
       </div>
 
-      {/* Subtle Bottom Brand Wave (Burgundy #A32035 & Green #007A48 matching Screen 1) */}
-      <div className="w-full pointer-events-none select-none leading-none" aria-hidden="true">
-        <svg viewBox="0 0 1440 84" className="w-full h-12 sm:h-16 block" preserveAspectRatio="none">
-          <path d="M0 34 C380 84, 920 -10, 1440 42 L1440 84 L0 84 Z" fill="#A32035" />
-          <path d="M620 84 C940 36, 1180 18, 1440 0 L1440 84 Z" fill="#007A48" />
+      {/* Subtle Flowing Bottom Brand Wave (Burgundy #A32035 & Green #007A48 matching Screen 1) */}
+      <div
+        className="w-full h-12 sm:h-16 relative overflow-hidden pointer-events-none select-none leading-none"
+        aria-hidden="true"
+      >
+        {/* Seamless Primary Burgundy Wave (#A32035) */}
+        <svg
+          viewBox="0 0 2880 84"
+          className="pq-wave-burgundy absolute inset-y-0 left-0 w-[200%] h-full block"
+          preserveAspectRatio="none"
+        >
+          <path
+            d="M0 38 C240 68, 480 68, 720 38 C960 8, 1200 8, 1440 38 C1680 68, 1920 68, 2160 38 C2400 8, 2640 8, 2880 38 L2880 88 L0 88 Z"
+            fill="#A32035"
+          />
         </svg>
+
+        {/* Seamless Counter-Flowing Green Crest Wave (#007A48) with Natural Blend */}
+        <div
+          className="pq-wave-green-swell absolute inset-0"
+          style={{
+            WebkitMaskImage:
+              'linear-gradient(90deg, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0.28) 34%, rgba(0,0,0,0.88) 68%, rgba(0,0,0,1) 100%)',
+            maskImage:
+              'linear-gradient(90deg, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0.28) 34%, rgba(0,0,0,0.88) 68%, rgba(0,0,0,1) 100%)',
+          }}
+        >
+          <svg
+            viewBox="0 0 2880 84"
+            className="pq-wave-green-drift absolute inset-y-0 left-0 w-[200%] h-full block"
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <linearGradient id="pq-green-blend" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#007A48" stopOpacity="0.82" />
+                <stop offset="55%" stopColor="#007A48" stopOpacity="0.96" />
+                <stop offset="100%" stopColor="#007A48" stopOpacity="1" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M0 46 C240 12, 480 12, 720 46 C960 76, 1200 76, 1440 46 C1680 12, 1920 12, 2160 46 C2400 76, 2640 76, 2880 46 L2880 88 L0 88 Z"
+              fill="url(#pq-green-blend)"
+            />
+          </svg>
+        </div>
       </div>
     </div>
   );
@@ -179,8 +219,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [password, setPassword] = useState('PQFS@Demo2026');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [biometricPrompt, setBiometricPrompt] = useState<'face' | 'finger' | null>(null);
   const [forgotMode, setForgotMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
 
@@ -191,19 +229,12 @@ export const LoginView: React.FC<LoginViewProps> = ({
       return;
     }
     setError('');
-    setLoading(true);
-    window.setTimeout(() => {
-      setLoading(false);
-      onLoginSuccess();
-    }, 800);
+    onLoginSuccess();
   };
 
-  const triggerBiometric = (kind: 'face' | 'finger') => {
-    setBiometricPrompt(kind);
-    window.setTimeout(() => {
-      setBiometricPrompt(null);
-      onLoginSuccess();
-    }, 950);
+  const triggerBiometric = () => {
+    setError('');
+    onLoginSuccess();
   };
 
   return (
@@ -228,8 +259,9 @@ export const LoginView: React.FC<LoginViewProps> = ({
             <PakQatarLogo variant="medium" />
           </div>
 
-          {!forgotMode ? (
-            <>
+          <PqTabSwap swapKey={forgotMode ? 'forgot' : 'login'}>
+            {!forgotMode ? (
+              <div>
               <div className="text-center mt-5">
                 <h1 className="text-2xl font-bold text-[#1E2022]">
                   Welcome <span className="text-[#A32035]">Back</span>
@@ -303,11 +335,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="w-full min-h-[48px] px-5 rounded-full bg-[#A32035] hover:opacity-90 disabled:opacity-60 text-white text-sm font-semibold transition-opacity flex items-center justify-between"
+                  className="w-full min-h-[48px] px-5 rounded-full bg-[#A32035] hover:opacity-90 text-white text-sm font-semibold transition-opacity flex items-center justify-between"
                 >
                   <span className="w-4" aria-hidden="true" />
-                  <span>{loading ? 'Signing In...' : 'Login'}</span>
+                  <span>Login</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </form>
@@ -325,7 +356,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => triggerBiometric('face')}
+                    onClick={triggerBiometric}
                     className="min-h-[64px] p-3 rounded-2xl border border-[#E5E7EB] bg-[#F7F5F2] hover:border-[#A32035] text-xs font-medium text-[#1E2022] flex flex-col items-center justify-center gap-1.5 transition-colors"
                   >
                     <ScanFace className="w-5 h-5 text-[#A32035]" />
@@ -333,7 +364,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => triggerBiometric('finger')}
+                    onClick={triggerBiometric}
                     className="min-h-[64px] p-3 rounded-2xl border border-[#E5E7EB] bg-[#F7F5F2] hover:border-[#007A48] text-xs font-medium text-[#1E2022] flex flex-col items-center justify-center gap-1.5 transition-colors"
                   >
                     <Fingerprint className="w-5 h-5 text-[#007A48]" />
@@ -354,7 +385,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
-            </>
+            </div>
           ) : (
             <div className="mt-6">
               <h2 className="text-xl font-bold text-[#1E2022]">Reset Password</h2>
@@ -392,26 +423,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </div>
             </div>
           )}
+          </PqTabSwap>
         </motion.div>
       </div>
 
-      {biometricPrompt && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-xs w-full text-center border border-[#E5E7EB] shadow-lg">
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-[#EAF3EE] text-[#A32035] flex items-center justify-center">
-              {biometricPrompt === 'face' ? (
-                <ScanFace className="w-7 h-7" />
-              ) : (
-                <Fingerprint className="w-7 h-7 text-[#007A48]" />
-              )}
-            </div>
-            <h3 className="mt-4 text-base font-bold text-[#1E2022]">
-              {biometricPrompt === 'face' ? 'Verifying Face ID' : 'Verifying Fingerprint'}
-            </h3>
-            <p className="mt-1 text-xs text-[#5C6066]">Demo biometric verification in progress...</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -720,7 +735,7 @@ export const BiometricSetupView: React.FC<BiometricSetupViewProps> = ({ onEnable
           <button
             type="button"
             onClick={() => setSelectedType('face')}
-            className={`w-full min-h-[52px] px-4 rounded-2xl border flex items-center justify-between transition-colors ${
+            className={`pq-card-interactive w-full min-h-[52px] px-4 rounded-2xl border flex items-center justify-between transition-colors ${
               selectedType === 'face'
                 ? 'border-[#A32035] bg-[#EAF3EE] text-[#1E2022]'
                 : 'border-[#E5E7EB] bg-[#F7F5F2] text-[#1E2022]'
@@ -738,7 +753,7 @@ export const BiometricSetupView: React.FC<BiometricSetupViewProps> = ({ onEnable
           <button
             type="button"
             onClick={() => setSelectedType('finger')}
-            className={`w-full min-h-[52px] px-4 rounded-2xl border flex items-center justify-between transition-colors ${
+            className={`pq-card-interactive w-full min-h-[52px] px-4 rounded-2xl border flex items-center justify-between transition-colors ${
               selectedType === 'finger'
                 ? 'border-[#A32035] bg-[#EAF3EE] text-[#1E2022]'
                 : 'border-[#E5E7EB] bg-[#F7F5F2] text-[#1E2022]'

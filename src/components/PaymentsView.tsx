@@ -10,7 +10,8 @@ import {
 } from 'lucide-react';
 import { ContributionPayment } from '../types/pqfs';
 import { DEMO_CUSTOMER } from '../data/pqfsData';
-import { PakQatarLogo, ProcessingOverlay } from './BrandAssets';
+import { ensureLoadingAssetsReady, PakQatarLogo, ProcessingOverlay } from './BrandAssets';
+import { PqModal, PqStaggerGroup, PqStaggerItem, PqTabSwap } from './MotionPrimitives';
 
 interface PaymentsViewProps {
   isAuthenticated: boolean;
@@ -63,15 +64,17 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
   const totalDuePkr = upcoming.reduce((sum, p) => sum + p.amountPkr, 0);
 
   const handleConfirmPayment = () => {
-    if (!activePayTarget) return;
-    setProcessing(true);
-    window.setTimeout(() => {
-      const ref = `TXN-PQF-${Math.floor(1000000 + Math.random() * 9000000)}`;
-      setCompletedRef(ref);
-      onPaymentCompleted(activePayTarget.id, selectedMethod, ref);
-      setProcessing(false);
-      setPayStep('result');
-    }, 1500);
+    if (!activePayTarget || processing) return;
+    void ensureLoadingAssetsReady().then(() => {
+      setProcessing(true);
+      window.setTimeout(() => {
+        const ref = `TXN-PQF-${Math.floor(1000000 + Math.random() * 9000000)}`;
+        setCompletedRef(ref);
+        onPaymentCompleted(activePayTarget.id, selectedMethod, ref);
+        setProcessing(false);
+        setPayStep('result');
+      }, 2000);
+    });
   };
 
   // Active Journey 3 Payment Checkout Flow
@@ -108,6 +111,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
             {payStep === 'result' ? 'Contribution Paid (Demo)' : 'Pay Contribution'}
           </h1>
 
+          <PqTabSwap swapKey={payStep}>
           {payStep === 'review' && (
             <div className="mt-5 space-y-5">
               <div className="p-4 rounded-2xl bg-[#F6F6F7] border border-[#E5E7EB] space-y-2.5 text-xs">
@@ -284,6 +288,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
               </div>
             </div>
           )}
+          </PqTabSwap>
         </div>
       </div>
     );
@@ -311,7 +316,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
 
       {/* Summary Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5">
+        <div className="pq-card-interactive rounded-2xl border border-[#E5E7EB] bg-white p-5">
           <div className="text-xs text-[#5C6066]">Upcoming Scheduled / Due</div>
           <div className="mt-1 text-2xl font-bold text-[#A32035] tabular-nums">
             {formatMoney(totalDuePkr)}
@@ -320,7 +325,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
             {upcoming.length} upcoming installment{upcoming.length === 1 ? '' : 's'}
           </div>
         </div>
-        <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5">
+        <div className="pq-card-interactive rounded-2xl border border-[#E5E7EB] bg-white p-5">
           <div className="text-xs text-[#5C6066]">Settled Receipts Available</div>
           <div className="mt-1 text-2xl font-bold text-[#007A48] tabular-nums">
             {history.length} Transactions
@@ -339,11 +344,11 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
             All upcoming contributions have been settled.
           </div>
         ) : (
-          <div className="space-y-3">
+          <PqStaggerGroup className="space-y-3">
             {upcoming.map((item) => (
+              <PqStaggerItem key={item.id}>
               <div
-                key={item.id}
-                className="rounded-2xl border border-[#E5E7EB] bg-white p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                className="pq-card-interactive rounded-2xl border border-[#E5E7EB] bg-white p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
                 <div>
                   <div className="text-xs font-semibold text-[#A32035]">
@@ -371,8 +376,9 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
                   </button>
                 </div>
               </div>
+              </PqStaggerItem>
             ))}
-          </div>
+          </PqStaggerGroup>
         )}
       </section>
 
@@ -413,8 +419,12 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
       </section>
 
       {/* Digital Receipt Modal */}
-      {receiptModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+      <PqModal
+        open={Boolean(receiptModal)}
+        onClose={() => setReceiptModal(null)}
+        ariaLabel="Contribution Receipt"
+      >
+        {receiptModal && (
           <div className="bg-white rounded-3xl max-w-md w-full p-6 border border-[#E5E7EB] shadow-lg">
             <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB] gap-3">
               <div>
@@ -472,8 +482,8 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </PqModal>
     </div>
   );
 };

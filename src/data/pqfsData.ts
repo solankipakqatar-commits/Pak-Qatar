@@ -1,4 +1,4 @@
-import {
+import type {
   AppNotification,
   ContributionPayment,
   ElaajProvider,
@@ -8,7 +8,7 @@ import {
   TakafulCertificate,
   TakafulClaim,
   TakafulProduct,
-} from '../types/pqfs';
+} from '../types/pqfs.ts';
 
 export const DEMO_CUSTOMER = {
   customerId: 'PQF-849201',
