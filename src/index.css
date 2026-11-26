@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@theme {
+  --color-pq-burgundy: #A32035;
+  --color-pq-yellow: #F5B335;
+  --color-pq-green: #007A48;
+  --color-pq-green-soft: #EAF3EE;
+  --color-pq-charcoal: #1E2022;
+  --color-pq-muted: #5C6066;
+  --color-pq-surface: #F7F5F2;
+  --color-pq-border: #E5E7EB;
+  --font-sans: "Gill Sans", "Gill Sans MT", "Cabin", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+@layer base {
+  html,
+  body {
+    font-family: "Gill Sans", "Gill Sans MT", "Cabin", -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #F7F5F2;
+    color: #1E2022;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Smooth hide scrollbars on horizontal pill/filter strips */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

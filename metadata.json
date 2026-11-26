@@ -1,0 +1,6 @@
+{
+  "name": "Pak-Qatar Financial Services",
+  "description": "Simple, seamless, secure, and Shariah-conscious Takaful mobile financial services application for Pak-Qatar Financial Services (PQFS).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
