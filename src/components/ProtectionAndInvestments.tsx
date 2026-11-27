@@ -12,24 +12,32 @@ import {
   Wallet,
 } from 'lucide-react';
 import {
+  FamilyProductCategory,
   FundHolding,
   ProtectionSubTab,
   TakafulCertificate,
-  TakafulEntity,
   TakafulProduct,
 } from '../types/pqfs';
-import { DEMO_CUSTOMER } from '../data/pqfsData';
+import { DEMO_CUSTOMER, TAKAFUL_PRODUCTS } from '../data/pqfsData';
 import { TakafulWheel } from './TakafulWheel';
 import { ensureLoadingAssetsReady, PakQatarLogo, ProcessingOverlay } from './BrandAssets';
-import { PQ_EASE, PqModal, PqTabSwap } from './MotionPrimitives';
+import {
+  PQ_EASE,
+  PqModal,
+  PqSelect,
+  PqStaggerGroup,
+  PqStaggerItem,
+  PqTabSwap,
+  useScreenTransition,
+} from './MotionPrimitives';
 
 interface ProtectionAndInvestmentsProps {
   isAuthenticated: boolean;
   maskSensitive: boolean;
   subTab: ProtectionSubTab;
   onSubTabChange: (tab: ProtectionSubTab) => void;
-  wheelEntity: TakafulEntity;
-  onWheelEntityChange: (entity: TakafulEntity) => void;
+  wheelCategory: FamilyProductCategory;
+  onWheelCategoryChange: (category: FamilyProductCategory) => void;
   onSelectProduct: (product: TakafulProduct) => void;
   certificates: TakafulCertificate[];
   funds: FundHolding[];
@@ -44,8 +52,8 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
   maskSensitive,
   subTab,
   onSubTabChange,
-  wheelEntity,
-  onWheelEntityChange,
+  wheelCategory,
+  onWheelCategoryChange,
   onSelectProduct,
   certificates,
   funds,
@@ -54,8 +62,9 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
   selectedCertModal,
   onSelectCertModal,
 }) => {
+  const { direction } = useScreenTransition();
   const [certStatusFilter, setCertStatusFilter] = useState<'Active' | 'Expired'>('Active');
-  const [certEntityFilter, setCertEntityFilter] = useState<'all' | 'family' | 'general'>('all');
+  const [certCategoryFilter, setCertCategoryFilter] = useState<FamilyProductCategory>('all');
   const [statementCert, setStatementCert] = useState<TakafulCertificate | null>(null);
   const [activeFundId, setActiveFundId] = useState<string>(funds[0]?.id ?? 'fund-balanced');
 
@@ -75,7 +84,11 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
 
   const filteredCerts = certificates.filter((c) => {
     if (c.status !== certStatusFilter) return false;
-    if (certEntityFilter !== 'all' && c.entity !== certEntityFilter) return false;
+    if (certCategoryFilter !== 'all') {
+      const matchedProduct = TAKAFUL_PRODUCTS.find((p) => p.id === c.productId);
+      const certCategory = matchedProduct?.category ?? 'savings-retirement';
+      if (certCategory !== certCategoryFilter) return false;
+    }
     return true;
   });
 
@@ -169,44 +182,46 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
             Discover Takaful plans, inspect certificates, and review investment funds.
           </p>
         </div>
-        <div className="inline-flex p-1 rounded-xl bg-[#F4F4F5] border border-[#E5E7EB]">
-          <button
-            type="button"
-            onClick={() => onSubTabChange('explore')}
-            className={`min-h-[40px] px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-              subTab === 'explore' ? 'bg-white text-[#A32035] shadow-sm' : 'text-[#5C6066]'
-            }`}
-          >
-            360° Product Selector
-          </button>
-          <button
-            type="button"
-            onClick={() => onSubTabChange('certificates')}
-            className={`min-h-[40px] px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-              subTab === 'certificates' ? 'bg-white text-[#A32035] shadow-sm' : 'text-[#5C6066]'
-            }`}
-          >
-            My Certificates
-          </button>
-          <button
-            type="button"
-            onClick={() => onSubTabChange('investments')}
-            className={`min-h-[40px] px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-              subTab === 'investments' ? 'bg-white text-[#A32035] shadow-sm' : 'text-[#5C6066]'
-            }`}
-          >
-            Investment & Funds
-          </button>
+        <div className="inline-flex p-1 rounded-xl bg-[#F4F4F5] border border-[#E5E7EB] max-w-full overflow-x-auto no-scrollbar">
+          {(
+            [
+              { key: 'explore', label: '360° Product Selector' },
+              { key: 'certificates', label: 'My Certificates' },
+              { key: 'investments', label: 'Investment & Funds' },
+            ] as const
+          ).map((tab) => {
+            const active = subTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => onSubTabChange(tab.key)}
+                className={`relative min-h-[40px] px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors shrink-0 ${
+                  active ? 'text-[#A32035]' : 'text-[#5C6066] hover:text-[#1E2022]'
+                }`}
+              >
+                {active && (
+                  <motion.span
+                    layoutId="protection-subtab-pill"
+                    transition={{ duration: 0.24, ease: PQ_EASE }}
+                    className="absolute inset-0 rounded-lg bg-white shadow-sm"
+                    aria-hidden="true"
+                  />
+                )}
+                <span className="relative z-10">{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <PqTabSwap swapKey={subTab}>
+      <PqTabSwap swapKey={subTab} direction={direction}>
         {/* Sub-tab 1: 360° Wheel & Product Catalogue */}
         {subTab === 'explore' && (
           <div className="rounded-3xl border border-[#007A48]/20 bg-[#EAF3EE] p-5 sm:p-7">
             <TakafulWheel
-              entity={wheelEntity}
-              onEntityChange={onWheelEntityChange}
+              category={wheelCategory}
+              onCategoryChange={onWheelCategoryChange}
               onSelectProduct={onSelectProduct}
             />
           </div>
@@ -220,7 +235,7 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
               <ShieldCheck className="w-10 h-10 text-[#A32035] mx-auto" />
               <h2 className="mt-3 text-lg font-bold text-[#1E2022]">Customer Sign-In Required</h2>
               <p className="mt-1.5 text-sm text-[#5C6066] max-w-md mx-auto">
-                Sign in to view your active and expired Family Takaful (PQFTL) and General Takaful (PQGTL) certificates.
+                Sign in to view your active and matured Family Takaful (PQFTL) certificates.
               </p>
               <button
                 type="button"
@@ -235,66 +250,78 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
               {/* Filter bar */}
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="inline-flex p-1 rounded-xl bg-[#F4F4F5] border border-[#E5E7EB]">
-                  {(['Active', 'Expired'] as const).map((st) => (
-                    <button
-                      key={st}
-                      type="button"
-                      onClick={() => setCertStatusFilter(st)}
-                      className={`min-h-[38px] px-3.5 rounded-lg text-xs font-medium transition-colors ${
-                        certStatusFilter === st
-                          ? 'bg-white text-[#1E2022] shadow-sm'
-                          : 'text-[#5C6066]'
-                      }`}
-                    >
-                      {st} Certificates
-                    </button>
-                  ))}
+                  {(['Active', 'Expired'] as const).map((st) => {
+                    const active = certStatusFilter === st;
+                    return (
+                      <button
+                        key={st}
+                        type="button"
+                        onClick={() => setCertStatusFilter(st)}
+                        className={`relative min-h-[38px] px-3.5 rounded-lg text-xs font-medium transition-colors ${
+                          active ? 'text-[#1E2022]' : 'text-[#5C6066]'
+                        }`}
+                      >
+                        {active && (
+                          <motion.span
+                            layoutId="cert-status-pill"
+                            transition={{ duration: 0.22, ease: PQ_EASE }}
+                            className="absolute inset-0 rounded-lg bg-white shadow-sm"
+                            aria-hidden="true"
+                          />
+                        )}
+                        <span className="relative z-10">{st} Certificates</span>
+                      </button>
+                    );
+                  })}
                 </div>
 
-                <div className="inline-flex p-1 rounded-xl bg-[#F4F4F5] border border-[#E5E7EB]">
+                <div className="inline-flex p-1 rounded-xl bg-[#F4F4F5] border border-[#E5E7EB] max-w-full overflow-x-auto no-scrollbar">
                   {(
                     [
-                      { key: 'all', label: 'All Companies' },
-                      { key: 'family', label: 'Family (PQFTL)' },
-                      { key: 'general', label: 'General (PQGTL)' },
+                      { key: 'all', label: 'All Plans' },
+                      { key: 'savings-retirement', label: 'Savings & Retirement' },
+                      { key: 'health-group', label: 'Health & Group' },
                     ] as const
-                  ).map((opt) => (
-                    <button
-                      key={opt.key}
-                      type="button"
-                      onClick={() => setCertEntityFilter(opt.key)}
-                      className={`min-h-[38px] px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                        certEntityFilter === opt.key
-                          ? 'bg-white text-[#A32035] shadow-sm'
-                          : 'text-[#5C6066]'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
+                  ).map((opt) => {
+                    const active = certCategoryFilter === opt.key;
+                    return (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        onClick={() => setCertCategoryFilter(opt.key)}
+                        className={`relative min-h-[38px] px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors shrink-0 ${
+                          active ? 'text-[#A32035]' : 'text-[#5C6066]'
+                        }`}
+                      >
+                        {active && (
+                          <motion.span
+                            layoutId="cert-cat-pill"
+                            transition={{ duration: 0.22, ease: PQ_EASE }}
+                            className="absolute inset-0 rounded-lg bg-white shadow-sm"
+                            aria-hidden="true"
+                          />
+                        )}
+                        <span className="relative z-10">{opt.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              <PqTabSwap swapKey={`${certStatusFilter}-${certEntityFilter}`}>
+              <PqTabSwap swapKey={`${certStatusFilter}-${certCategoryFilter}`}>
                 {filteredCerts.length === 0 ? (
                   <div className="rounded-2xl border border-[#E5E7EB] bg-white p-8 text-center text-sm text-[#5C6066]">
-                    No {certStatusFilter.toLowerCase()} certificates found for the selected company filter.
+                    No {certStatusFilter.toLowerCase()} certificates found for the selected category filter.
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <PqStaggerGroup className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filteredCerts.map((cert) => (
-                      <div
-                        key={cert.id}
-                        className="pq-card-interactive rounded-2xl border border-[#E5E7EB] bg-white p-5 flex flex-col justify-between"
-                      >
+                      <PqStaggerItem key={cert.id}>
+                        <div className="pq-card-interactive h-full rounded-2xl border border-[#E5E7EB] bg-white p-5 flex flex-col justify-between">
                       <div>
                         <div className="flex items-center justify-between gap-2 text-xs">
-                          <span
-                            className={`font-bold ${
-                              cert.entity === 'family' ? 'text-[#A32035]' : 'text-[#007A48]'
-                            }`}
-                          >
-                            {cert.entity === 'family' ? 'Family Takaful · PQFTL' : 'General Takaful · PQGTL'}
+                          <span className="font-bold text-[#A32035]">
+                            Family Takaful · PQFTL
                           </span>
                           <span
                             className={`font-semibold ${
@@ -319,12 +346,12 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
                           </div>
                           <div>
                             <div className="text-[#5C6066]">
-                              {cert.entity === 'family' && cert.participantInvestmentAccountPkr
+                              {cert.participantInvestmentAccountPkr
                                 ? 'Investment Account (PIA)'
                                 : 'Contribution'}
                             </div>
                             <div className="font-bold text-[#1E2022] tabular-nums mt-0.5">
-                              {cert.entity === 'family' && cert.participantInvestmentAccountPkr
+                              {cert.participantInvestmentAccountPkr
                                 ? formatMoney(cert.participantInvestmentAccountPkr)
                                 : `${formatMoney(cert.contributionAmountPkr)} (${cert.frequency})`}
                             </div>
@@ -349,9 +376,10 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
                           <span>Certificate / Statement</span>
                         </button>
                       </div>
-                    </div>
-                  ))}
-                  </div>
+                        </div>
+                        </PqStaggerItem>
+                    ))}
+                  </PqStaggerGroup>
                 )}
               </PqTabSwap>
             </div>
@@ -428,46 +456,49 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                 <div className="lg:col-span-7 space-y-3">
                   <h3 className="text-base font-bold text-[#1E2022]">Fund Allocation & Units</h3>
-                  {funds.map((fund) => {
-                    const isSelected = fund.id === activeFund.id;
-                    return (
-                      <button
-                        key={fund.id}
-                        type="button"
-                        onClick={() => setActiveFundId(fund.id)}
-                        className={`pq-card-interactive w-full text-left rounded-2xl border p-4 transition-colors ${
-                          isSelected
-                            ? 'border-[#A32035] bg-white shadow-sm'
-                            : 'border-[#E5E7EB] bg-white hover:border-[#A32035]/60'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="text-xs font-semibold text-[#007A48]">
-                              {fund.riskProfile} Strategy · {fund.allocationPercent}% Target
+                  <PqStaggerGroup className="space-y-3">
+                    {funds.map((fund) => {
+                      const isSelected = fund.id === activeFund.id;
+                      return (
+                        <PqStaggerItem key={fund.id}>
+                          <button
+                            type="button"
+                            onClick={() => setActiveFundId(fund.id)}
+                            className={`pq-card-interactive w-full text-left rounded-2xl border p-4 transition-colors ${
+                              isSelected
+                                ? 'border-[#A32035] bg-white shadow-sm'
+                                : 'border-[#E5E7EB] bg-white hover:border-[#A32035]/60'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <div className="text-xs font-semibold text-[#007A48]">
+                                  {fund.riskProfile} Strategy · {fund.allocationPercent}% Target
+                                </div>
+                                <div className="text-sm font-bold text-[#1E2022] mt-0.5">
+                                  {fund.fundName}
+                                </div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <div className="text-sm font-bold text-[#1E2022] tabular-nums">
+                                  {formatMoney(fund.valuePkr)}
+                                </div>
+                                <div className="text-[11px] text-[#007A48] font-medium mt-0.5">
+                                  {fund.ytdIllustrativeChange}
+                                </div>
+                              </div>
                             </div>
-                            <div className="text-sm font-bold text-[#1E2022] mt-0.5">
-                              {fund.fundName}
-                            </div>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <div className="text-sm font-bold text-[#1E2022] tabular-nums">
-                              {formatMoney(fund.valuePkr)}
-                            </div>
-                            <div className="text-[11px] text-[#007A48] font-medium mt-0.5">
-                              {fund.ytdIllustrativeChange}
-                            </div>
-                          </div>
-                        </div>
 
-                        <div className="mt-3 pt-2.5 border-t border-[#E5E7EB] flex flex-wrap items-center justify-between gap-2 text-xs text-[#5C6066] tabular-nums">
-                          <span>Units: {fund.units.toLocaleString()}</span>
-                          <span>NAV: PKR {fund.navPkr.toFixed(2)}</span>
-                          <span>As of {fund.valuationDate}</span>
-                        </div>
-                      </button>
-                    );
-                  })}
+                            <div className="mt-3 pt-2.5 border-t border-[#E5E7EB] flex flex-wrap items-center justify-between gap-2 text-xs text-[#5C6066] tabular-nums">
+                              <span>Units: {fund.units.toLocaleString()}</span>
+                              <span>NAV: PKR {fund.navPkr.toFixed(2)}</span>
+                              <span>As of {fund.valuationDate}</span>
+                            </div>
+                          </button>
+                        </PqStaggerItem>
+                      );
+                    })}
+                  </PqStaggerGroup>
                 </div>
 
                 {/* Selected Fund SVG Performance Chart & Statements */}
@@ -642,9 +673,7 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
               </div>
               <div className="flex justify-between">
                 <span className="text-[#5C6066]">Company</span>
-                <span className="font-semibold text-[#1E2022]">
-                  {statementCert.entity === 'family' ? 'PQFTL' : 'PQGTL'}
-                </span>
+                <span className="font-semibold text-[#1E2022]">PQFTL</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[#5C6066]">Generated Date</span>
@@ -652,7 +681,7 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
               </div>
             </div>
             <p className="mt-3 text-[11px] text-[#5C6066]">
-              Demonstrative certificate & statement layout. Official signed documents are accessible through verified PQFS portals.
+              Demonstrative certificate & statement layout. Official signed documents are accessible through verified PQFTL portals.
             </p>
             <div className="mt-5 flex gap-2.5">
               <button
@@ -707,33 +736,31 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
                     <label className="block text-xs font-semibold text-[#1E2022] mb-1">
                       Switch From Fund
                     </label>
-                    <select
+                    <PqSelect
+                      ariaLabel="Switch From Fund"
                       value={switchFromId}
-                      onChange={(e) => setSwitchFromId(e.target.value)}
-                      className="w-full min-h-[44px] px-3 rounded-xl border border-[#E5E7EB] text-xs bg-white"
-                    >
-                      {funds.map((f) => (
-                        <option key={f.id} value={f.id}>
-                          {f.fundName}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setSwitchFromId}
+                      options={funds.map((f) => ({
+                        value: f.id,
+                        label: f.fundName,
+                        subLabel: `${f.riskProfile} Strategy`,
+                      }))}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-[#1E2022] mb-1">
                       Switch To Fund
                     </label>
-                    <select
+                    <PqSelect
+                      ariaLabel="Switch To Fund"
                       value={switchToId}
-                      onChange={(e) => setSwitchToId(e.target.value)}
-                      className="w-full min-h-[44px] px-3 rounded-xl border border-[#E5E7EB] text-xs bg-white"
-                    >
-                      {funds.map((f) => (
-                        <option key={f.id} value={f.id}>
-                          {f.fundName}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setSwitchToId}
+                      options={funds.map((f) => ({
+                        value: f.id,
+                        label: f.fundName,
+                        subLabel: `${f.riskProfile} Strategy`,
+                      }))}
+                    />
                   </div>
                 </>
               )}

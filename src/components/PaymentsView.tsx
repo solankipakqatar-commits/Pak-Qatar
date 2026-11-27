@@ -11,7 +11,13 @@ import {
 import { ContributionPayment } from '../types/pqfs';
 import { DEMO_CUSTOMER } from '../data/pqfsData';
 import { ensureLoadingAssetsReady, PakQatarLogo, ProcessingOverlay } from './BrandAssets';
-import { PqModal, PqStaggerGroup, PqStaggerItem, PqTabSwap } from './MotionPrimitives';
+import {
+  PqModal,
+  PqStaggerGroup,
+  PqStaggerItem,
+  PqTabSwap,
+  TransitionDirection,
+} from './MotionPrimitives';
 
 interface PaymentsViewProps {
   isAuthenticated: boolean;
@@ -34,6 +40,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
 }) => {
   const [selectedMethod, setSelectedMethod] = useState<string>('Raast Instant Transfer (Demo)');
   const [payStep, setPayStep] = useState<'review' | 'confirm' | 'result'>('review');
+  const [stepDir, setStepDir] = useState<TransitionDirection>('forward');
   const [processing, setProcessing] = useState(false);
   const [completedRef, setCompletedRef] = useState('');
   const [receiptModal, setReceiptModal] = useState<ContributionPayment | null>(null);
@@ -72,6 +79,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
         setCompletedRef(ref);
         onPaymentCompleted(activePayTarget.id, selectedMethod, ref);
         setProcessing(false);
+        setStepDir('forward');
         setPayStep('result');
       }, 2000);
     });
@@ -91,8 +99,12 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
           <button
             type="button"
             onClick={() => {
-              if (payStep === 'confirm') setPayStep('review');
-              else onSelectPayTarget(null);
+              if (payStep === 'confirm') {
+                setStepDir('back');
+                setPayStep('review');
+              } else {
+                onSelectPayTarget(null);
+              }
             }}
             className="min-h-[44px] inline-flex items-center gap-2 text-sm font-medium text-[#5C6066] hover:text-[#A32035] mb-3"
           >
@@ -103,15 +115,13 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
 
         <div className="rounded-3xl border border-[#E5E7EB] bg-white p-6">
           <div className="text-xs font-semibold text-[#A32035]">
-            {activePayTarget.entity === 'family'
-              ? 'Family Takaful Contribution · PQFTL'
-              : 'General Takaful Contribution · PQGTL'}
+            Family Takaful Contribution · PQFTL
           </div>
           <h1 className="mt-1 text-xl font-bold text-[#1E2022]">
             {payStep === 'result' ? 'Contribution Paid (Demo)' : 'Pay Contribution'}
           </h1>
 
-          <PqTabSwap swapKey={payStep}>
+          <PqTabSwap swapKey={payStep} direction={stepDir}>
           {payStep === 'review' && (
             <div className="mt-5 space-y-5">
               <div className="p-4 rounded-2xl bg-[#F6F6F7] border border-[#E5E7EB] space-y-2.5 text-xs">
@@ -194,7 +204,10 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
 
               <button
                 type="button"
-                onClick={() => setPayStep('confirm')}
+                onClick={() => {
+                  setStepDir('forward');
+                  setPayStep('confirm');
+                }}
                 className="w-full min-h-[48px] rounded-xl bg-[#A32035] hover:opacity-90 text-white text-sm font-medium"
               >
                 Continue to Confirmation
@@ -217,7 +230,10 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
               <div className="flex gap-2.5">
                 <button
                   type="button"
-                  onClick={() => setPayStep('review')}
+                  onClick={() => {
+                    setStepDir('back');
+                    setPayStep('review');
+                  }}
                   className="flex-1 min-h-[46px] rounded-xl border border-[#E5E7EB] text-xs font-medium text-[#1E2022]"
                 >
                   Cancel
@@ -331,7 +347,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
             {history.length} Transactions
           </div>
           <div className="mt-1 text-[11px] text-[#5C6066]">
-            Demo payment history across PQFTL & PQGTL
+            Demo payment history for PQFTL certificates
           </div>
         </div>
       </div>
@@ -352,8 +368,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
               >
                 <div>
                   <div className="text-xs font-semibold text-[#A32035]">
-                    {item.entity === 'family' ? 'Family Takaful · PQFTL' : 'General Takaful · PQGTL'} · Due{' '}
-                    {item.dueDate}
+                    Family Takaful · PQFTL · Due {item.dueDate}
                   </div>
                   <div className="text-sm font-bold text-[#1E2022] mt-0.5">{item.productName}</div>
                   <div className="text-xs text-[#5C6066] mt-0.5 tabular-nums">

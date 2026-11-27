@@ -1,4 +1,6 @@
-export type TakafulEntity = 'family' | 'general';
+export type TakafulEntity = 'family';
+
+export type FamilyProductCategory = 'all' | 'savings-retirement' | 'health-group';
 
 export type NavTab = 'home' | 'protection' | 'claims' | 'payments' | 'family' | 'more';
 
@@ -20,21 +22,12 @@ export type ClaimStage =
 export interface TakafulProduct {
   id: string;
   entity: TakafulEntity;
+  category: Exclude<FamilyProductCategory, 'all'>;
   companyName: string;
   name: string;
   shortTagline: string;
   mainBenefit: string;
-  iconKey:
-    | 'shield'
-    | 'graduation'
-    | 'landmark'
-    | 'heart'
-    | 'car'
-    | 'home'
-    | 'plane'
-    | 'briefcase'
-    | 'umbrella'
-    | 'building';
+  iconKey: 'shield' | 'graduation' | 'landmark' | 'heart' | 'briefcase' | 'building';
   overview: string;
   eligibility: string[];
   coverageInfo: string[];

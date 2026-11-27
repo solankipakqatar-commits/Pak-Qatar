@@ -26,9 +26,9 @@ import {
   NavTab,
   ProtectionSubTab,
   SupportComplaint,
+  FamilyProductCategory,
   TakafulCertificate,
   TakafulClaim,
-  TakafulEntity,
   TakafulProduct,
 } from './types/pqfs';
 import {
@@ -56,6 +56,7 @@ import {
 } from './components/AuthViews';
 import {
   CustomerDashboardView,
+  GuestApplySeed,
   GuestHomeSection,
   GuestHomeView,
   ProductApplicationFlow,
@@ -70,7 +71,15 @@ import {
   AssistantNavigationAction,
   PakQatarAssistant,
 } from './components/PakQatarAssistant';
-import { PQ_EASE, PqDrawer, PqModal } from './components/MotionPrimitives';
+import {
+  PQ_EASE,
+  PqDirectionalSwap,
+  PqDrawer,
+  PqModal,
+  ScreenTransitionProvider,
+  TransitionDirection,
+  useScreenTransition,
+} from './components/MotionPrimitives';
 
 const NAV_ITEMS: {
   id: NavTab;
@@ -86,7 +95,8 @@ const NAV_ITEMS: {
   { id: 'more', label: 'More', urLabel: 'مزید', icon: LayoutGrid },
 ];
 
-export default function App() {
+function AppContent() {
+  const { direction, triggerTransition } = useScreenTransition();
   const [screen, setScreen] = useState<AuthScreen>('splash');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authToken, setAuthToken] = useState<string | null>(null);
@@ -95,13 +105,13 @@ export default function App() {
   const [maskSensitive, setMaskSensitive] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(true);
 
-  // Centralized 2-second ornamental loading state (prevents overlapping transitions)
+  // Centralized 2-second ornamental video loading state (used for auth & launch loading)
   const [navLoading, setNavLoading] = useState(false);
   const transitionTimerRef = useRef<number | null>(null);
   const transitionInFlightRef = useRef(false);
 
   // Domain states
-  const [wheelEntity, setWheelEntity] = useState<TakafulEntity>('family');
+  const [wheelCategory, setWheelCategory] = useState<FamilyProductCategory>('all');
   const [selectedProduct, setSelectedProduct] = useState<TakafulProduct | null>(null);
   const [applyingProduct, setApplyingProduct] = useState<TakafulProduct | null>(null);
   const [pendingAppAfterAuth, setPendingAppAfterAuth] = useState<TakafulProduct | null>(null);
@@ -126,6 +136,7 @@ export default function App() {
 
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [guestSection, setGuestSection] = useState<GuestHomeSection>('overview');
+  const [guestApplySeed, setGuestApplySeed] = useState<GuestApplySeed | null>(null);
   const [guestMenuOpen, setGuestMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -135,6 +146,16 @@ export default function App() {
       }
     };
   }, []);
+
+  const navigateWithLines = useCallback(
+    (action: () => void, dir: TransitionDirection = 'forward') => {
+      if (transitionInFlightRef.current || transitionTimerRef.current !== null) {
+        return;
+      }
+      triggerTransition(action, { direction: dir, scrollToTop: true });
+    },
+    [triggerTransition]
+  );
 
   const navigateWithLoader = useCallback((action: () => void) => {
     if (transitionInFlightRef.current || transitionTimerRef.current !== null) {
@@ -148,29 +169,48 @@ export default function App() {
         transitionTimerRef.current = null;
         transitionInFlightRef.current = false;
         action();
+        window.scrollTo({ top: 0, behavior: 'auto' });
         setNavLoading(false);
       }, 2000);
     });
   }, []);
 
   const handleOpenProduct = (product: TakafulProduct) => {
-    navigateWithLoader(() => {
+    navigateWithLines(() => {
       setSelectedProduct(product);
       setApplyingProduct(null);
-    });
+    }, 'forward');
+  };
+
+  const handleGuestStartApplication = (
+    product: TakafulProduct,
+    seed?: Omit<GuestApplySeed, 'product'>
+  ) => {
+    navigateWithLines(() => {
+      setGuestApplySeed({ product, ...seed });
+      setSelectedProduct(null);
+      setApplyingProduct(null);
+      setActiveTab('home');
+      setGuestSection('apply');
+    }, 'forward');
+  };
+
+  const handleHandoffToRegister = (product: TakafulProduct) => {
+    navigateWithLines(() => {
+      setPendingAppAfterAuth(product);
+      setScreen('register');
+    }, 'forward');
   };
 
   const handleApplyNow = (product: TakafulProduct) => {
-    navigateWithLoader(() => {
-      if (!isAuthenticated) {
-        // Journey 1: Guest -> Apply Now -> Registration -> OTP -> Application Form
-        setPendingAppAfterAuth(product);
-        setScreen('register');
-      } else {
-        setApplyingProduct(product);
-        setSelectedProduct(null);
-      }
-    });
+    if (!isAuthenticated) {
+      handleGuestStartApplication(product);
+      return;
+    }
+    navigateWithLines(() => {
+      setApplyingProduct(product);
+      setSelectedProduct(null);
+    }, 'forward');
   };
 
   const completeAuthIntoApp = () => {
@@ -201,7 +241,7 @@ export default function App() {
 
   const handleAssistantNavigation = (action: AssistantNavigationAction) => {
     if (action === 'none') return;
-    navigateWithLoader(() => {
+    navigateWithLines(() => {
       setSelectedProduct(null);
       setApplyingProduct(null);
 
@@ -210,15 +250,14 @@ export default function App() {
           setScreen('login');
           break;
         case 'family-plans':
-          setWheelEntity('family');
-          setProtectionSubTab('explore');
-          setActiveTab('protection');
-          setScreen('app');
-          break;
-        case 'general-plans':
-          setWheelEntity('general');
-          setProtectionSubTab('explore');
-          setActiveTab('protection');
+          setWheelCategory('all');
+          if (!isAuthenticated) {
+            setGuestSection('products');
+            setActiveTab('home');
+          } else {
+            setProtectionSubTab('explore');
+            setActiveTab('protection');
+          }
           setScreen('app');
           break;
         case 'calculator':
@@ -252,12 +291,17 @@ export default function App() {
           setScreen('app');
           break;
         case 'support':
-          setActiveTab('more');
-          setMoreSubSection('support');
+          if (!isAuthenticated) {
+            setGuestSection('contact');
+            setActiveTab('home');
+          } else {
+            setActiveTab('more');
+            setMoreSubSection('support');
+          }
           setScreen('app');
           break;
       }
-    });
+    }, 'forward');
   };
 
   const handlePaymentCompleted = (paymentId: string, method: string, newRef: string) => {
@@ -288,20 +332,27 @@ export default function App() {
       tab === activeTab &&
       !selectedProduct &&
       !applyingProduct &&
+      (tab !== 'home' || isAuthenticated || guestSection === 'overview') &&
       (tab !== 'more' || moreSubSection === 'hub') &&
       (tab !== 'payments' || !activePayTarget) &&
       (tab !== 'claims' || !claimSubmitOpen)
     ) {
       return;
     }
-    navigateWithLoader(() => {
+    const prevIdx = NAV_ITEMS.findIndex((item) => item.id === activeTab);
+    const nextIdx = NAV_ITEMS.findIndex((item) => item.id === tab);
+    const navDir: TransitionDirection =
+      tab === activeTab ? 'back' : nextIdx >= prevIdx ? 'forward' : 'back';
+
+    navigateWithLines(() => {
       setActiveTab(tab);
       setSelectedProduct(null);
       setApplyingProduct(null);
+      if (tab === 'home' && !isAuthenticated) setGuestSection('overview');
       if (tab !== 'more') setMoreSubSection('hub');
       if (tab !== 'payments') setActivePayTarget(null);
       if (tab !== 'claims') setClaimSubmitOpen(false);
-    });
+    }, navDir);
   };
 
   const openShariahFromAnywhere = () => {
@@ -314,12 +365,12 @@ export default function App() {
     ) {
       return;
     }
-    navigateWithLoader(() => {
+    navigateWithLines(() => {
       setSelectedProduct(null);
       setApplyingProduct(null);
       setActiveTab('more');
       setMoreSubSection('shariah');
-    });
+    }, 'forward');
   };
 
   const openSupportFromAnywhere = () => {
@@ -332,12 +383,12 @@ export default function App() {
     ) {
       return;
     }
-    navigateWithLoader(() => {
+    navigateWithLines(() => {
       setSelectedProduct(null);
       setApplyingProduct(null);
       setActiveTab('more');
       setMoreSubSection('support');
-    });
+    }, 'forward');
   };
 
   const renderScreen = () => {
@@ -351,19 +402,20 @@ export default function App() {
           language={language}
           onLanguageChange={setLanguage}
           onExploreGuest={() =>
-            navigateWithLoader(() => {
+            navigateWithLines(() => {
               setIsAuthenticated(false);
+              setGuestApplySeed(null);
               setGuestSection('overview');
               setActiveTab('home');
               setScreen('app');
-            })
+            }, 'forward')
           }
-          onGoLogin={() => navigateWithLoader(() => setScreen('login'))}
+          onGoLogin={() => navigateWithLines(() => setScreen('login'), 'forward')}
           onGoRegister={() =>
-            navigateWithLoader(() => {
+            navigateWithLines(() => {
               setPendingAppAfterAuth(null);
               setScreen('register');
-            })
+            }, 'forward')
           }
           onOpenContact={() => setContactModalOpen(true)}
         />
@@ -374,9 +426,9 @@ export default function App() {
       return (
         <LoginView
           biometricEnabled={biometricEnabled}
-          onBack={() => navigateWithLoader(() => setScreen('welcome'))}
+          onBack={() => navigateWithLines(() => setScreen('welcome'), 'back')}
           onLoginSuccess={completeAuthIntoApp}
-          onGoRegister={() => navigateWithLoader(() => setScreen('register'))}
+          onGoRegister={() => navigateWithLines(() => setScreen('register'), 'forward')}
           onOpenContact={() => setContactModalOpen(true)}
         />
       );
@@ -387,15 +439,17 @@ export default function App() {
         <RegisterView
           pendingApplicationProductName={pendingAppAfterAuth?.name ?? null}
           onBack={() =>
-            navigateWithLoader(() => {
+            navigateWithLines(() => {
               if (pendingAppAfterAuth) {
                 setScreen('app');
               } else {
                 setScreen('welcome');
               }
-            })
+            }, 'back')
           }
-          onCompleteToBiometric={() => navigateWithLoader(() => setScreen('biometric'))}
+          onCompleteToBiometric={() =>
+            navigateWithLines(() => setScreen('biometric'), 'forward')
+          }
         />
       );
     }
@@ -440,7 +494,7 @@ export default function App() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => navigateWithLoader(() => setScreen('login'))}
+                    onClick={() => navigateWithLines(() => setScreen('login'), 'forward')}
                     className="min-h-[34px] px-2.5 rounded-lg bg-[#A32035] text-white text-[11px] font-medium whitespace-nowrap"
                   >
                     Login
@@ -481,7 +535,7 @@ export default function App() {
               className="w-full min-h-[40px] px-3 rounded-xl border border-[#E5E7EB] bg-white text-xs font-medium text-[#1E2022] hover:border-[#A32035] flex items-center justify-center gap-2"
             >
               <PhoneCall className="w-3.5 h-3.5 text-[#A32035]" />
-              <span>PQFS Helpline</span>
+              <span>PQFTL Helpline</span>
             </button>
             <div className="text-center">Demo Build · Illustrative Data</div>
           </div>
@@ -495,7 +549,7 @@ export default function App() {
               <>
                 <button
                   type="button"
-                  onClick={() => navigateWithLoader(() => setScreen('login'))}
+                  onClick={() => navigateWithLines(() => setScreen('login'), 'forward')}
                   className="min-h-[36px] px-2.5 rounded-lg border border-[#A32035] text-[#A32035] text-xs font-semibold inline-flex items-center gap-1 whitespace-nowrap"
                 >
                   <LogIn className="w-3.5 h-3.5" />
@@ -527,226 +581,252 @@ export default function App() {
           </header>
 
           {/* Scrollable Content Viewport */}
-          <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-24 lg:pb-10">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`${activeTab}-${selectedProduct?.id ?? ''}-${applyingProduct?.id ?? ''}-${moreSubSection}-${guestSection}-${protectionSubTab}-${familyMode}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.24, ease: PQ_EASE }}
-              >
-                {applyingProduct ? (
-                  <ProductApplicationFlow
-                    product={applyingProduct}
-                    isAuthenticated={isAuthenticated}
-                    onBack={() => navigateWithLoader(() => setApplyingProduct(null))}
-                    onSubmitted={() => {}}
-                  />
-                ) : selectedProduct ? (
-                  <ProductDetailView
-                    product={selectedProduct}
-                    onBack={() => navigateWithLoader(() => setSelectedProduct(null))}
-                    onApplyNow={handleApplyNow}
-                    onOpenShariah={openShariahFromAnywhere}
-                  />
-                ) : (
-                  <>
-                    {activeTab === 'home' &&
-                      (!isAuthenticated ? (
-                        <GuestHomeView
-                          language={language}
-                          guestSection={guestSection}
-                          onGuestSectionChange={(section) => {
-                            if (section === guestSection) return;
-                            navigateWithLoader(() => setGuestSection(section));
-                          }}
-                          wheelEntity={wheelEntity}
-                          onWheelEntityChange={setWheelEntity}
-                          onSelectProduct={handleOpenProduct}
-                          onOpenShariah={openShariahFromAnywhere}
-                          onOpenSupport={openSupportFromAnywhere}
-                          onStartApplication={handleApplyNow}
-                          onBackToWelcome={() => navigateWithLoader(() => setScreen('welcome'))}
-                        />
-                      ) : (
-                        <CustomerDashboardView
-                          language={language}
-                          maskSensitive={maskSensitive}
-                          certificates={certificates}
-                          payments={payments}
-                          claims={claims}
-                          notifications={notifications}
-                          onMarkAllRead={() =>
-                            setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
-                          }
-                          onNavigateTab={(tab) => {
-                            if (tab === 'protection') {
-                              navigateWithLoader(() => {
-                                setProtectionSubTab('explore');
-                                setSelectedProduct(null);
-                                setApplyingProduct(null);
-                                setActiveTab('protection');
-                              });
-                              return;
-                            }
-                            handleTabSelect(tab);
-                          }}
-                          onOpenCertificatesList={() =>
-                            navigateWithLoader(() => {
-                              setProtectionSubTab('certificates');
-                              setSelectedProduct(null);
-                              setApplyingProduct(null);
-                              setActiveTab('protection');
-                            })
-                          }
-                          onOpenInvestments={() =>
-                            navigateWithLoader(() => {
-                              setProtectionSubTab('investments');
-                              setSelectedProduct(null);
-                              setApplyingProduct(null);
-                              setActiveTab('protection');
-                            })
-                          }
-                          onOpenSupport={openSupportFromAnywhere}
-                          onPayDue={(pay) =>
-                            navigateWithLoader(() => {
-                              setActivePayTarget(pay);
-                              setActiveTab('payments');
-                            })
-                          }
-                          onOpenCertificate={(cert) =>
-                            navigateWithLoader(() => {
-                              setActiveTab('protection');
-                              setProtectionSubTab('certificates');
-                              setSelectedCertModal(cert);
-                            })
-                          }
-                          onOpenElaajCard={() =>
-                            navigateWithLoader(() => {
-                              setFamilyMode('elaaj');
-                              setActiveTab('family');
-                            })
-                          }
-                        />
-                      ))}
-
-                    {activeTab === 'protection' && (
-                      <ProtectionAndInvestmentsView
-                        isAuthenticated={isAuthenticated}
-                        maskSensitive={maskSensitive}
-                        subTab={protectionSubTab}
-                        onSubTabChange={(nextTab) => {
-                          if (nextTab === protectionSubTab) return;
-                          navigateWithLoader(() => setProtectionSubTab(nextTab));
+          <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-24 lg:pb-10 overflow-x-clip">
+            <PqDirectionalSwap
+              swapKey={`${activeTab}-${selectedProduct?.id ?? ''}-${applyingProduct?.id ?? ''}-${moreSubSection}-${guestSection}-${protectionSubTab}-${familyMode}`}
+              direction={direction}
+            >
+              {applyingProduct ? (
+                <ProductApplicationFlow
+                  product={applyingProduct}
+                  isAuthenticated={isAuthenticated}
+                  onBack={() => navigateWithLines(() => setApplyingProduct(null), 'back')}
+                  onSubmitted={() => {}}
+                />
+              ) : selectedProduct ? (
+                <ProductDetailView
+                  product={selectedProduct}
+                  onBack={() => navigateWithLines(() => setSelectedProduct(null), 'back')}
+                  onApplyNow={handleApplyNow}
+                  onOpenShariah={openShariahFromAnywhere}
+                />
+              ) : (
+                <>
+                  {activeTab === 'home' &&
+                    (!isAuthenticated ? (
+                      <GuestHomeView
+                        language={language}
+                        guestSection={guestSection}
+                        onGuestSectionChange={(section) => {
+                          if (section === guestSection) return;
+                          navigateWithLines(
+                            () => setGuestSection(section),
+                            section === 'overview' ? 'back' : 'forward'
+                          );
                         }}
-                        wheelEntity={wheelEntity}
-                        onWheelEntityChange={setWheelEntity}
+                        wheelCategory={wheelCategory}
+                        onWheelCategoryChange={setWheelCategory}
                         onSelectProduct={handleOpenProduct}
-                        certificates={certificates}
-                        funds={funds}
-                        onUpdateFunds={setFunds}
-                        onRequireLogin={() => navigateWithLoader(() => setScreen('login'))}
-                        selectedCertModal={selectedCertModal}
-                        onSelectCertModal={setSelectedCertModal}
-                      />
-                    )}
-
-                    {activeTab === 'claims' && (
-                      <ClaimsView
-                        isAuthenticated={isAuthenticated}
-                        maskSensitive={maskSensitive}
-                        certificates={certificates}
-                        claims={claims}
-                        startSubmitOpen={claimSubmitOpen}
-                        onSetStartSubmitOpen={(open) => {
-                          if (open === claimSubmitOpen) return;
-                          navigateWithLoader(() => setClaimSubmitOpen(open));
-                        }}
-                        onClaimSubmitted={(newClaim) => setClaims((prev) => [newClaim, ...prev])}
-                        onRequireLogin={() => navigateWithLoader(() => setScreen('login'))}
-                        onOpenSupport={openSupportFromAnywhere}
-                      />
-                    )}
-
-                    {activeTab === 'payments' && (
-                      <PaymentsView
-                        isAuthenticated={isAuthenticated}
-                        maskSensitive={maskSensitive}
-                        payments={payments}
-                        activePayTarget={activePayTarget}
-                        onSelectPayTarget={(target) => {
-                          if ((target?.id ?? null) === (activePayTarget?.id ?? null)) return;
-                          navigateWithLoader(() => setActivePayTarget(target));
-                        }}
-                        onPaymentCompleted={handlePaymentCompleted}
-                        onRequireLogin={() => navigateWithLoader(() => setScreen('login'))}
-                      />
-                    )}
-
-                    {activeTab === 'family' && (
-                      <FamilyAndElaajView
-                        key={familyMode}
-                        isAuthenticated={isAuthenticated}
-                        initialMode={familyMode}
-                        mode={familyMode}
-                        onModeChange={(nextMode) => {
-                          if (nextMode === familyMode) return;
-                          navigateWithLoader(() => setFamilyMode(nextMode));
-                        }}
-                        familyMembers={familyMembers}
-                        onUpdateFamilyMember={handleUpdateFamilyMember}
-                        onRequireLogin={() => navigateWithLoader(() => setScreen('login'))}
-                        onGoToClaims={() =>
-                          navigateWithLoader(() => {
-                            setClaimSubmitOpen(true);
-                            setActiveTab('claims');
-                          })
+                        onOpenShariah={openShariahFromAnywhere}
+                        onStartApplication={handleGuestStartApplication}
+                        onHandoffToRegister={handleHandoffToRegister}
+                        guestApplySeed={guestApplySeed}
+                        onBackToWelcome={() =>
+                          navigateWithLines(() => setScreen('welcome'), 'back')
                         }
                       />
-                    )}
-
-                    {activeTab === 'more' && (
-                      <MoreShariahSupportView
-                        isAuthenticated={isAuthenticated}
-                        subSection={moreSubSection}
-                        onSubSectionChange={(nextSub) => {
-                          if (nextSub === moreSubSection) return;
-                          navigateWithLoader(() => setMoreSubSection(nextSub));
-                        }}
+                    ) : (
+                      <CustomerDashboardView
                         language={language}
-                        onLanguageChange={setLanguage}
                         maskSensitive={maskSensitive}
-                        onToggleMask={() => setMaskSensitive((m) => !m)}
-                        biometricEnabled={biometricEnabled}
-                        onToggleBiometric={() => setBiometricEnabled((b) => !b)}
-                        complaints={complaints}
-                        onAddComplaint={(c) => setComplaints((prev) => [c, ...prev])}
-                        onReplaySplash={() => navigateWithLoader(() => setScreen('splash'))}
-                        onLogoutOrLogin={() => {
-                          if (isAuthenticated && authToken) {
-                            void fetch('/api/auth/demo-session', {
-                              method: 'DELETE',
-                              headers: { Authorization: `Bearer ${authToken}` },
-                            }).catch(() => {});
+                        certificates={certificates}
+                        payments={payments}
+                        claims={claims}
+                        notifications={notifications}
+                        onMarkAllRead={() =>
+                          setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+                        }
+                        onNavigateTab={(tab) => {
+                          if (tab === 'protection') {
+                            navigateWithLines(() => {
+                              setProtectionSubTab('explore');
+                              setSelectedProduct(null);
+                              setApplyingProduct(null);
+                              setActiveTab('protection');
+                            }, 'forward');
+                            return;
                           }
-                          navigateWithLoader(() => {
-                            if (isAuthenticated) {
-                              setIsAuthenticated(false);
-                              setAuthToken(null);
-                              setActiveTab('home');
-                              setScreen('welcome');
-                            } else {
-                              setScreen('login');
-                            }
-                          });
+                          handleTabSelect(tab);
                         }}
+                        onOpenCertificatesList={() =>
+                          navigateWithLines(() => {
+                            setProtectionSubTab('certificates');
+                            setSelectedProduct(null);
+                            setApplyingProduct(null);
+                            setActiveTab('protection');
+                          }, 'forward')
+                        }
+                        onOpenInvestments={() =>
+                          navigateWithLines(() => {
+                            setProtectionSubTab('investments');
+                            setSelectedProduct(null);
+                            setApplyingProduct(null);
+                            setActiveTab('protection');
+                          }, 'forward')
+                        }
+                        onOpenSupport={openSupportFromAnywhere}
+                        onPayDue={(pay) =>
+                          navigateWithLines(() => {
+                            setActivePayTarget(pay);
+                            setActiveTab('payments');
+                          }, 'forward')
+                        }
+                        onOpenCertificate={(cert) =>
+                          navigateWithLines(() => {
+                            setActiveTab('protection');
+                            setProtectionSubTab('certificates');
+                            setSelectedCertModal(cert);
+                          }, 'forward')
+                        }
+                        onOpenElaajCard={() =>
+                          navigateWithLines(() => {
+                            setFamilyMode('elaaj');
+                            setActiveTab('family');
+                          }, 'forward')
+                        }
                       />
-                    )}
-                  </>
-                )}
-              </motion.div>
-            </AnimatePresence>
+                    ))}
+
+                  {activeTab === 'protection' && (
+                    <ProtectionAndInvestmentsView
+                      isAuthenticated={isAuthenticated}
+                      maskSensitive={maskSensitive}
+                      subTab={protectionSubTab}
+                      onSubTabChange={(nextTab) => {
+                        if (nextTab === protectionSubTab) return;
+                        const order: ProtectionSubTab[] = ['explore', 'certificates', 'investments'];
+                        const nextDir =
+                          order.indexOf(nextTab) >= order.indexOf(protectionSubTab)
+                            ? 'forward'
+                            : 'back';
+                        navigateWithLines(() => setProtectionSubTab(nextTab), nextDir);
+                      }}
+                      wheelCategory={wheelCategory}
+                      onWheelCategoryChange={setWheelCategory}
+                      onSelectProduct={handleOpenProduct}
+                      certificates={certificates}
+                      funds={funds}
+                      onUpdateFunds={setFunds}
+                      onRequireLogin={() =>
+                        navigateWithLines(() => setScreen('login'), 'forward')
+                      }
+                      selectedCertModal={selectedCertModal}
+                      onSelectCertModal={setSelectedCertModal}
+                    />
+                  )}
+
+                  {activeTab === 'claims' && (
+                    <ClaimsView
+                      isAuthenticated={isAuthenticated}
+                      maskSensitive={maskSensitive}
+                      certificates={certificates}
+                      claims={claims}
+                      startSubmitOpen={claimSubmitOpen}
+                      onSetStartSubmitOpen={(open) => {
+                        if (open === claimSubmitOpen) return;
+                        navigateWithLines(
+                          () => setClaimSubmitOpen(open),
+                          open ? 'forward' : 'back'
+                        );
+                      }}
+                      onClaimSubmitted={(newClaim) => setClaims((prev) => [newClaim, ...prev])}
+                      onRequireLogin={() =>
+                        navigateWithLines(() => setScreen('login'), 'forward')
+                      }
+                      onOpenSupport={openSupportFromAnywhere}
+                    />
+                  )}
+
+                  {activeTab === 'payments' && (
+                    <PaymentsView
+                      isAuthenticated={isAuthenticated}
+                      maskSensitive={maskSensitive}
+                      payments={payments}
+                      activePayTarget={activePayTarget}
+                      onSelectPayTarget={(target) => {
+                        if ((target?.id ?? null) === (activePayTarget?.id ?? null)) return;
+                        navigateWithLines(
+                          () => setActivePayTarget(target),
+                          target ? 'forward' : 'back'
+                        );
+                      }}
+                      onPaymentCompleted={handlePaymentCompleted}
+                      onRequireLogin={() =>
+                        navigateWithLines(() => setScreen('login'), 'forward')
+                      }
+                    />
+                  )}
+
+                  {activeTab === 'family' && (
+                    <FamilyAndElaajView
+                      key={familyMode}
+                      isAuthenticated={isAuthenticated}
+                      initialMode={familyMode}
+                      mode={familyMode}
+                      onModeChange={(nextMode) => {
+                        if (nextMode === familyMode) return;
+                        navigateWithLines(
+                          () => setFamilyMode(nextMode),
+                          nextMode === 'elaaj' ? 'forward' : 'back'
+                        );
+                      }}
+                      familyMembers={familyMembers}
+                      onUpdateFamilyMember={handleUpdateFamilyMember}
+                      onRequireLogin={() =>
+                        navigateWithLines(() => setScreen('login'), 'forward')
+                      }
+                      onGoToClaims={() =>
+                        navigateWithLines(() => {
+                          setClaimSubmitOpen(true);
+                          setActiveTab('claims');
+                        }, 'forward')
+                      }
+                    />
+                  )}
+
+                  {activeTab === 'more' && (
+                    <MoreShariahSupportView
+                      isAuthenticated={isAuthenticated}
+                      subSection={moreSubSection}
+                      onSubSectionChange={(nextSub) => {
+                        if (nextSub === moreSubSection) return;
+                        navigateWithLines(
+                          () => setMoreSubSection(nextSub),
+                          nextSub === 'hub' ? 'back' : 'forward'
+                        );
+                      }}
+                      language={language}
+                      onLanguageChange={setLanguage}
+                      maskSensitive={maskSensitive}
+                      onToggleMask={() => setMaskSensitive((m) => !m)}
+                      biometricEnabled={biometricEnabled}
+                      onToggleBiometric={() => setBiometricEnabled((b) => !b)}
+                      complaints={complaints}
+                      onAddComplaint={(c) => setComplaints((prev) => [c, ...prev])}
+                      onReplaySplash={() => navigateWithLoader(() => setScreen('splash'))}
+                      onLogoutOrLogin={() => {
+                        if (isAuthenticated && authToken) {
+                          void fetch('/api/auth/demo-session', {
+                            method: 'DELETE',
+                            headers: { Authorization: `Bearer ${authToken}` },
+                          }).catch(() => {});
+                        }
+                        if (isAuthenticated) {
+                          navigateWithLoader(() => {
+                            setIsAuthenticated(false);
+                            setAuthToken(null);
+                            setActiveTab('home');
+                            setScreen('welcome');
+                          });
+                        } else {
+                          navigateWithLines(() => setScreen('login'), 'forward');
+                        }
+                      }}
+                    />
+                  )}
+                </>
+              )}
+            </PqDirectionalSwap>
           </main>
         </div>
 
@@ -768,12 +848,12 @@ export default function App() {
                   ) {
                     return;
                   }
-                  navigateWithLoader(() => {
+                  navigateWithLines(() => {
                     setSelectedProduct(null);
                     setApplyingProduct(null);
                     setGuestSection('overview');
                     setActiveTab('home');
-                  });
+                  }, 'back');
                 }}
                 className={`h-full flex flex-col items-center justify-center gap-0.5 px-1 transition-colors ${
                   activeTab === 'home' && guestSection === 'overview'
@@ -798,12 +878,12 @@ export default function App() {
                   ) {
                     return;
                   }
-                  navigateWithLoader(() => {
+                  navigateWithLines(() => {
                     setSelectedProduct(null);
                     setApplyingProduct(null);
                     setGuestSection('calculator');
                     setActiveTab('home');
-                  });
+                  }, 'forward');
                 }}
                 className={`h-full flex flex-col items-center justify-center gap-0.5 px-1 transition-colors ${
                   activeTab === 'home' && guestSection === 'calculator'
@@ -828,12 +908,12 @@ export default function App() {
                   ) {
                     return;
                   }
-                  navigateWithLoader(() => {
+                  navigateWithLines(() => {
                     setSelectedProduct(null);
                     setApplyingProduct(null);
                     setGuestSection('faqs');
                     setActiveTab('home');
-                  });
+                  }, 'forward');
                 }}
                 className={`h-full flex flex-col items-center justify-center gap-0.5 px-1 transition-colors ${
                   activeTab === 'home' && guestSection === 'faqs'
@@ -847,9 +927,24 @@ export default function App() {
 
               <button
                 type="button"
-                onClick={openSupportFromAnywhere}
+                onClick={() => {
+                  if (
+                    activeTab === 'home' &&
+                    guestSection === 'contact' &&
+                    !selectedProduct &&
+                    !applyingProduct
+                  ) {
+                    return;
+                  }
+                  navigateWithLines(() => {
+                    setSelectedProduct(null);
+                    setApplyingProduct(null);
+                    setGuestSection('contact');
+                    setActiveTab('home');
+                  }, 'forward');
+                }}
                 className={`h-full flex flex-col items-center justify-center gap-0.5 px-1 transition-colors ${
-                  activeTab === 'more' && moreSubSection === 'support'
+                  activeTab === 'home' && guestSection === 'contact'
                     ? 'text-[#A32035]'
                     : 'text-[#5C6066]'
                 }`}
@@ -910,18 +1005,17 @@ export default function App() {
                   type="button"
                   onClick={() => {
                     setGuestMenuOpen(false);
-                    navigateWithLoader(() => {
-                      setGuestSection('overview');
+                    navigateWithLines(() => {
                       setSelectedProduct(null);
                       setApplyingProduct(null);
-                      setProtectionSubTab('explore');
-                      setActiveTab('protection');
-                    });
+                      setGuestSection('products');
+                      setActiveTab('home');
+                    }, 'forward');
                   }}
                   className="w-full min-h-[44px] px-3 rounded-xl hover:bg-[#EAF3EE] text-left text-sm font-medium text-[#1E2022] flex items-center gap-3"
                 >
                   <Sparkles className="w-4 h-4 text-[#007A48]" />
-                  <span>360° Takaful Product Dial</span>
+                  <span>Family Takaful Products</span>
                 </button>
                 <button
                   type="button"
@@ -938,7 +1032,12 @@ export default function App() {
                   type="button"
                   onClick={() => {
                     setGuestMenuOpen(false);
-                    openSupportFromAnywhere();
+                    navigateWithLines(() => {
+                      setSelectedProduct(null);
+                      setApplyingProduct(null);
+                      setGuestSection('contact');
+                      setActiveTab('home');
+                    }, 'forward');
                   }}
                   className="w-full min-h-[44px] px-3 rounded-xl hover:bg-[#EAF3EE] text-left text-sm font-medium text-[#1E2022] flex items-center gap-3"
                 >
@@ -953,7 +1052,7 @@ export default function App() {
                 type="button"
                 onClick={() => {
                   setGuestMenuOpen(false);
-                  navigateWithLoader(() => setScreen('login'));
+                  navigateWithLines(() => setScreen('login'), 'forward');
                 }}
                 className="w-full min-h-[44px] rounded-full bg-[#A32035] text-white text-sm font-semibold"
               >
@@ -963,7 +1062,7 @@ export default function App() {
                 type="button"
                 onClick={() => {
                   setGuestMenuOpen(false);
-                  navigateWithLoader(() => setScreen('register'));
+                  navigateWithLines(() => setScreen('register'), 'forward');
                 }}
                 className="w-full min-h-[44px] rounded-full border border-[#A32035] text-[#A32035] text-sm font-semibold"
               >
@@ -977,14 +1076,18 @@ export default function App() {
   };
 
   return (
-    <MotionConfig reducedMotion="user">
+    <>
       <AnimatePresence mode="wait">
         <motion.div
           key={screen}
-          initial={screen === 'splash' ? false : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.22, ease: PQ_EASE }}
+          initial={
+            screen === 'splash'
+              ? false
+              : { opacity: 0, x: direction === 'forward' ? 20 : -20 }
+          }
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: direction === 'forward' ? -16 : 16 }}
+          transition={{ duration: 0.26, ease: PQ_EASE }}
         >
           {renderScreen()}
         </motion.div>
@@ -996,7 +1099,9 @@ export default function App() {
         ariaLabel="Contact and Support"
       >
         <div className="bg-white rounded-3xl max-w-md w-full p-6 border border-[#E5E7EB] shadow-lg">
-          <div className="text-xs font-semibold text-[#007A48]">Pak-Qatar Financial Services</div>
+          <div className="text-xs font-semibold text-[#007A48]">
+            Pak-Qatar Family Takaful Limited (PQFTL)
+          </div>
           <h2 className="mt-1 text-lg font-bold text-[#1E2022]">Contact & Support</h2>
           <div className="mt-4 space-y-2.5 text-xs text-[#5C6066]">
             <div>
@@ -1038,6 +1143,16 @@ export default function App() {
         onNavigateAction={handleAssistantNavigation}
       />
       <NavigationLoadingOverlay visible={navLoading} />
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <MotionConfig reducedMotion="user">
+      <ScreenTransitionProvider>
+        <AppContent />
+      </ScreenTransitionProvider>
     </MotionConfig>
   );
 }

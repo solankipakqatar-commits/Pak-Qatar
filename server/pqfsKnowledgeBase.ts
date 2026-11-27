@@ -16,7 +16,6 @@ export interface KnowledgeDoc {
   category:
     | 'company'
     | 'family-product'
-    | 'general-product'
     | 'shariah'
     | 'app-guide'
     | 'support'
@@ -30,32 +29,69 @@ export interface KnowledgeDoc {
 
 const APP_AND_CORPORATE_GUIDES: KnowledgeDoc[] = [
   {
-    id: 'guide-company-overview',
+    id: 'guide-pqftl-overview',
     category: 'company',
-    title: 'Pak-Qatar Financial Services (PQFS) Group Companies',
-    sourceLabel: 'Official PQFS Corporate & Product Overview',
+    title: 'Pak-Qatar Family Takaful Limited (PQFTL) Overview',
+    sourceLabel: 'Official PQFTL Corporate & Product Overview',
     keywords: [
       'pak-qatar',
-      'pqfs',
       'pqftl',
-      'pqgtl',
       'family',
-      'general',
+      'takaful',
       'company',
-      'group',
-      'difference',
+      'savings',
+      'education',
+      'retirement',
+      'elaaj',
+      'vps',
+      'kafalat',
+      'mahana',
       'karachi',
       'پاک قطر',
       'خاندانی',
-      'جنرل',
+      'فیملی',
       'تکافل',
       'کمپنی',
     ],
     content: [
-      'Pak-Qatar Financial Services (PQFS) operates two strictly separate Takaful companies:',
-      '1. Pak-Qatar Family Takaful Limited (PQFTL): Long-term family protection, Child Education Takaful, Retirement & Wealth Accumulation, Individual & Family Elaaj Health, and Corporate Group Family Takaful. Family investment-linked plans separate Participant Risk (Waqf/Tabarru) and Participant Investment Account (PIA) units.',
-      '2. Pak-Qatar General Takaful Limited (PQGTL): Pure annual or per-trip risk-pool protection including Motor Takaful (Comprehensive), Home & Fire Property Takaful, Travel & Umrah Takaful, General Healthcare & Accident, and Marine, Cargo & SME Takaful.',
-      `Head Office: ${PQFS_VERIFIED_CONTACT.headOffice}. UAN: ${PQFS_VERIFIED_CONTACT.uan}. Email: ${PQFS_VERIFIED_CONTACT.email}. Website: ${PQFS_VERIFIED_CONTACT.website}.`,
+      'This application is dedicated exclusively to Pak-Qatar Family Takaful Limited (PQFTL).',
+      'PQFTL provides Shariah-compliant long-term family protection, savings & wealth accumulation, Child Education Takaful, Mahana Bachat & Flexi savings, Lifetime Kafalat, Voluntary Pension Scheme (VPS), Individual & Family Elaaj Health, and Corporate Group Family & Group Health Takaful.',
+      'PQFTL unit-linked Family Takaful plans clearly separate Participant Risk (Waqf/Tabarru pool) and Participant Investment Account (PIA) units under Shariah Supervisory Board oversight.',
+      `Head Office: ${PQFS_VERIFIED_CONTACT.headOffice}. UAN: ${PQFS_VERIFIED_CONTACT.uan}. Email: ${PQFS_VERIFIED_CONTACT.email}. PQFTL Website: ${PQFS_VERIFIED_CONTACT.website}.`,
+    ].join('\n'),
+    lastUpdated: KNOWLEDGE_BASE_LAST_UPDATED,
+  },
+  {
+    id: 'guide-general-takaful-referral',
+    category: 'support',
+    title: 'General Takaful Inquiries (Out-of-Scope Guidance)',
+    sourceLabel: 'Official Pak-Qatar Channel Referral Guide',
+    keywords: [
+      'general-referral',
+      'out-of-scope',
+      'general',
+      'motor',
+      'car',
+      'vehicle',
+      'travel',
+      'umrah',
+      'home',
+      'fire',
+      'property',
+      'marine',
+      'cargo',
+      'pqgtl',
+      'جنرل',
+      'موٹر',
+      'گاڑی',
+      'سفر',
+      'عمرہ',
+      'گھر',
+    ],
+    content: [
+      'This mobile application is dedicated exclusively to Pak-Qatar Family Takaful Limited (PQFTL) products and customer services.',
+      'General Takaful plans (such as Motor, Travel, Home/Fire, or Marine coverage) are NOT offered or serviced inside this PQFTL app.',
+      `For General Takaful inquiries or assistance, please contact Pak-Qatar official channels directly: UAN ${PQFS_VERIFIED_CONTACT.uan}, email ${PQFS_VERIFIED_CONTACT.email}, or visit ${PQFS_VERIFIED_CONTACT.groupWebsite}.`,
     ].join('\n'),
     lastUpdated: KNOWLEDGE_BASE_LAST_UPDATED,
   },
@@ -63,7 +99,7 @@ const APP_AND_CORPORATE_GUIDES: KnowledgeDoc[] = [
     id: 'guide-registration-login-biometrics',
     category: 'app-guide',
     title: 'Registration, Customer Login & Biometric Access Guide',
-    sourceLabel: 'PQFS Mobile App Onboarding Guide',
+    sourceLabel: 'PQFTL Mobile App Onboarding Guide',
     keywords: [
       'register',
       'registration',
@@ -83,7 +119,7 @@ const APP_AND_CORPORATE_GUIDES: KnowledgeDoc[] = [
       'اکاؤنٹ',
     ],
     content: [
-      'How to register or sign in inside the PQFS app:',
+      'How to register or sign in inside the PQFTL app:',
       '• New Customer Registration: Tap "New Customer? Register" from Welcome or Login, enter your CNIC number, registered mobile number, and create a secure password, then verify OTP in the guided flow.',
       '• Customer Login: Tap "Customer Login", enter your Mobile Number or Customer ID and password, or tap Face ID / Fingerprint if enabled.',
       '• Enable Biometric Login: After registration (or via More > Biometric & Security), enable Face ID and/or Fingerprint for quick subsequent access.',
@@ -95,7 +131,7 @@ const APP_AND_CORPORATE_GUIDES: KnowledgeDoc[] = [
     id: 'guide-payments',
     category: 'app-guide',
     title: 'How to Make a Contribution Payment',
-    sourceLabel: 'PQFS Contribution & Payments Guide',
+    sourceLabel: 'PQFTL Contribution & Payments Guide',
     keywords: [
       'pay',
       'payment',
@@ -111,7 +147,7 @@ const APP_AND_CORPORATE_GUIDES: KnowledgeDoc[] = [
       'رسید',
     ],
     content: [
-      'Steps to pay a due or scheduled Takaful contribution in the PQFS app:',
+      'Steps to pay a due or scheduled Family Takaful contribution in the PQFTL app:',
       '1. Sign in via Customer Login.',
       '2. Open the Payments tab (or tap Contributions / Payments from My Takaful Dashboard).',
       '3. Select the due contribution and tap "Pay Contribution".',
@@ -124,7 +160,7 @@ const APP_AND_CORPORATE_GUIDES: KnowledgeDoc[] = [
     id: 'guide-certificates',
     category: 'app-guide',
     title: 'Viewing Certificates, Statements & Fund Holdings',
-    sourceLabel: 'PQFS My Protection & Certificates Guide',
+    sourceLabel: 'PQFTL My Protection & Certificates Guide',
     keywords: [
       'certificate',
       'policy',
@@ -141,10 +177,10 @@ const APP_AND_CORPORATE_GUIDES: KnowledgeDoc[] = [
       'فنڈ',
     ],
     content: [
-      'Steps to view your Takaful certificates and investment details:',
+      'Steps to view your PQFTL Family Takaful certificates and investment details:',
       '1. Sign in and open "My Certificates" from the Dashboard or open the "My Protection" tab.',
-      '2. Filter between Family (PQFTL) and General (PQGTL) certificates.',
-      '3. Tap any certificate to inspect covered benefit, contribution schedule, next due date, nominee/asset details, and download summary statements.',
+      '2. Filter your PQFTL certificates by category (All Plans, Savings & Retirement, or Health & Group).',
+      '3. Tap any certificate to inspect covered benefit, contribution schedule, next due date, beneficiary/nominee details, and download summary statements.',
       '4. Under "Investment & Funds" (PQFTL investment-linked plans), review illustrative unit holdings, NAV dates, and top-up options.',
     ].join('\n'),
     lastUpdated: KNOWLEDGE_BASE_LAST_UPDATED,
@@ -152,25 +188,26 @@ const APP_AND_CORPORATE_GUIDES: KnowledgeDoc[] = [
   {
     id: 'guide-claims',
     category: 'app-guide',
-    title: 'Submitting & Tracking a Takaful Claim',
-    sourceLabel: 'PQFS Claims Centre Guide',
+    title: 'Submitting & Tracking a Family Takaful Claim',
+    sourceLabel: 'PQFTL Claims Centre Guide',
     keywords: [
       'claim',
       'submit claim',
       'track claim',
-      'motor claim',
       'health claim',
       'elaaj claim',
+      'hospital',
       'reimbursement',
-      'surveyor',
+      'maturity',
+      'death',
       'کلیم',
       'دعویٰ',
       'ٹریک',
     ],
     content: [
-      'How to submit or track a claim in the PQFS app:',
+      'How to submit or track a PQFTL Family Takaful or Elaaj Health claim in the app:',
       '• Track My Claim: Sign in and open the "Claims" tab (or tap "Claims" on your Dashboard) to see live claim stages: Submitted -> Documents Review -> Under Assessment -> Decision -> Completed.',
-      '• Submit a New Claim: In the Claims tab, tap "Submit New Claim", choose your active Family (PQFTL) or General (PQGTL) certificate, describe the incident/hospitalization, attach supporting documents (such as repair invoices, photos, or discharge summaries & itemized bills), and submit for assessment.',
+      '• Submit a New Claim: In the Claims tab, tap "Submit New Claim", choose your active PQFTL certificate, select the claim type (Elaaj Hospitalization / Reimbursement, Critical Illness / Surgical Care, Family Death Benefit, or Maturity / Partial Withdrawal), attach supporting documents (such as discharge summaries, itemized hospital bills, CNIC copy, or doctor reports), and submit for assessment.',
       `• Need assistance? Call UAN ${PQFS_VERIFIED_CONTACT.uan} or email ${PQFS_VERIFIED_CONTACT.email}.`,
     ].join('\n'),
     lastUpdated: KNOWLEDGE_BASE_LAST_UPDATED,
@@ -179,7 +216,7 @@ const APP_AND_CORPORATE_GUIDES: KnowledgeDoc[] = [
     id: 'guide-elaaj-calculator',
     category: 'app-guide',
     title: 'Digital Elaaj Card, Panel Hospitals & Contribution Calculator',
-    sourceLabel: 'PQFS Self-Service Tools Guide',
+    sourceLabel: 'PQFTL Self-Service Tools Guide',
     keywords: [
       'elaaj',
       'hospital',
@@ -195,7 +232,7 @@ const APP_AND_CORPORATE_GUIDES: KnowledgeDoc[] = [
     ],
     content: [
       '• Digital Elaaj Health & Panel Lookup: Signed-in customers can open "My Family" -> switch to "Elaaj Health" to view their Digital Elaaj Card and search panel hospitals, specialists, and diagnostic centres by city (such as Karachi, Lahore, Islamabad).',
-      '• Contribution Calculator: Open the "Calculator" tab from Guest Home or bottom navigation to select any Family (PQFTL) or General (PQGTL) plan, adjust contribution amount and term, and preview illustrative non-guaranteed demonstration figures. Calculator estimates are illustrative only; final terms require formal underwriting.',
+      '• Contribution Calculator: Open the "Calculator" tab from Guest Home or bottom navigation to select any PQFTL plan (Savings & Retirement or Health & Group), adjust contribution amount and term, and preview illustrative non-guaranteed demonstration figures. Calculator estimates are illustrative only; final terms require formal underwriting.',
       `Illustrative Panel Facilities in App: ${DEMO_ELAAJ_PROVIDERS.map((p) => `${p.name} (${p.city})`).join('; ')}.`,
     ].join('\n'),
     lastUpdated: KNOWLEDGE_BASE_LAST_UPDATED,
@@ -203,8 +240,8 @@ const APP_AND_CORPORATE_GUIDES: KnowledgeDoc[] = [
   {
     id: 'guide-branches-support',
     category: 'support',
-    title: 'Official Contact Channels, Branches & Services',
-    sourceLabel: 'PQFS Official Contact & Branch Directory',
+    title: 'Official PQFTL Contact Channels, Branches & Services',
+    sourceLabel: 'PQFTL Official Contact & Branch Directory',
     keywords: [
       'contact',
       'helpline',
@@ -225,7 +262,7 @@ const APP_AND_CORPORATE_GUIDES: KnowledgeDoc[] = [
     ],
     content: [
       `Official Helpline (UAN): ${PQFS_VERIFIED_CONTACT.uan}`,
-      `Email: ${PQFS_VERIFIED_CONTACT.email} | Website: ${PQFS_VERIFIED_CONTACT.website}`,
+      `Email: ${PQFS_VERIFIED_CONTACT.email} | PQFTL Portal: ${PQFS_VERIFIED_CONTACT.website} | Group Website: ${PQFS_VERIFIED_CONTACT.groupWebsite}`,
       `WhatsApp Channel: ${PQFS_VERIFIED_CONTACT.whatsappInfo}`,
       `Branches: ${DEMO_BRANCHES.map((b) => `${b.city} - ${b.branch} (${b.address}, ${b.hours})`).join(' | ')}`,
       `Consultant Verification Examples: ${DEMO_AGENTS.map((a) => `${a.name} (${a.code}, ${a.entity})`).join(' | ')}`,
@@ -237,20 +274,26 @@ const APP_AND_CORPORATE_GUIDES: KnowledgeDoc[] = [
 
 const PRODUCT_DOCS: KnowledgeDoc[] = TAKAFUL_PRODUCTS.map((p) => ({
   id: `product-${p.id}`,
-  category: p.entity === 'family' ? 'family-product' : 'general-product',
-  title: `${p.name} (${p.entity === 'family' ? 'PQFTL' : 'PQGTL'})`,
+  category: 'family-product',
+  title: `${p.name} (PQFTL)`,
   sourceLabel: `${p.companyName} Product Specification`,
   keywords: [
     p.name.toLowerCase(),
-    p.entity === 'family' ? 'family' : 'general',
-    p.entity === 'family' ? 'pqftl' : 'pqgtl',
+    'family',
+    'pqftl',
+    p.category,
     p.id,
     ...p.shortTagline.toLowerCase().split(/\W+/),
     ...p.mainBenefit.toLowerCase().split(/\W+/),
-    ...(p.entity === 'family' ? ['خاندانی', 'بچت', 'تعلیم', 'ریٹائرمنٹ', 'علاج'] : ['جنرل', 'موٹر', 'گاڑی', 'گھر', 'سفر', 'عمرہ']),
+    'خاندانی',
+    'بچت',
+    'تعلیم',
+    'ریٹائرمنٹ',
+    'علاج',
+    'پنشن',
   ],
   content: [
-    `Plan: ${p.name} | Company: ${p.companyName}`,
+    `Plan: ${p.name} | Company: ${p.companyName} | Category: ${p.category === 'savings-retirement' ? 'Savings & Retirement' : 'Health & Group'}`,
     `Summary: ${p.overview}`,
     `Primary Benefit: ${p.mainBenefit}`,
     `Eligibility: ${p.eligibility.join('; ')}`,
@@ -267,7 +310,7 @@ const SHARIAH_DOCS: KnowledgeDoc[] = SHARIAH_MODULES.map((m) => ({
   id: `shariah-${m.id}`,
   category: 'shariah',
   title: m.title,
-  sourceLabel: 'PQFS Shariah Transparency Centre',
+  sourceLabel: 'PQFTL Shariah Transparency Centre',
   keywords: [
     'shariah',
     'islamic',
@@ -302,20 +345,22 @@ export const KNOWLEDGE_BASE_DOCS: KnowledgeDoc[] = [
 ];
 
 const URDU_TO_ENGLISH_HINTS: Array<[string, string[]]> = [
-  ['تکافل', ['takaful', 'waqf', 'tabarru', 'wakalah', 'pak-qatar']],
+  ['تکافل', ['takaful', 'waqf', 'tabarru', 'wakalah', 'pak-qatar', 'pqftl']],
   ['خاندانی', ['family', 'pqftl', 'savings', 'education', 'retirement']],
   ['فیملی', ['family', 'pqftl']],
-  ['جنرل', ['general', 'pqgtl', 'motor', 'home', 'travel']],
-  ['موٹر', ['motor', 'vehicle', 'car', 'pqgtl']],
-  ['گاڑی', ['motor', 'car', 'pqgtl']],
-  ['سفر', ['travel', 'umrah', 'pqgtl']],
-  ['عمرہ', ['travel', 'umrah', 'pqgtl']],
-  ['گھر', ['home', 'fire', 'property', 'pqgtl']],
+  ['جنرل', ['general-referral', 'out-of-scope', 'general', 'pak-qatar']],
+  ['موٹر', ['general-referral', 'out-of-scope', 'motor']],
+  ['گاڑی', ['general-referral', 'out-of-scope', 'car']],
+  ['سفر', ['general-referral', 'out-of-scope', 'travel']],
+  ['عمرہ', ['general-referral', 'out-of-scope', 'umrah']],
+  ['گھر', ['general-referral', 'out-of-scope', 'home']],
   ['تعلیم', ['child', 'education', 'pqftl']],
-  ['ریٹائرمنٹ', ['retirement', 'wealth', 'pqftl']],
+  ['بچت', ['savings', 'mahana', 'bachat', 'pqftl']],
+  ['پنشن', ['vps', 'pension', 'retirement', 'pqftl']],
+  ['ریٹائرمنٹ', ['retirement', 'wealth', 'vps', 'pqftl']],
   ['صحت', ['elaaj', 'health', 'hospital', 'medical']],
   ['علاج', ['elaaj', 'health', 'hospital']],
-  ['کلیم', ['claim', 'track', 'submit', 'surveyor']],
+  ['کلیم', ['claim', 'track', 'submit', 'hospital']],
   ['ادائیگی', ['payment', 'contribution', 'raast', '1link']],
   ['قسط', ['payment', 'contribution']],
   ['سرٹیفکیٹ', ['certificate', 'policy', 'statement']],
@@ -328,6 +373,9 @@ const URDU_TO_ENGLISH_HINTS: Array<[string, string[]]> = [
   ['رابطہ', ['contact', 'uan', 'email', 'branch', 'support']],
   ['مدد', ['support', 'contact', 'uan', 'guide']],
 ];
+
+const OUT_OF_SCOPE_GENERAL_REGEX =
+  /\b(general takaful|pqgtl|motor|car insurance|vehicle|auto takaful|travel|umrah|home|fire|marine|cargo)\b/i;
 
 export function retrieveRelevantKnowledge(query: string, maxDocs = 6): KnowledgeDoc[] {
   const normalized = query.toLowerCase();
@@ -344,9 +392,13 @@ export function retrieveRelevantKnowledge(query: string, maxDocs = 6): Knowledge
     }
   }
 
-  // Always include core corporate overview so PQFTL/PQGTL boundary is clear
+  const isOutOfScopeGeneralQuery =
+    OUT_OF_SCOPE_GENERAL_REGEX.test(normalized) ||
+    ['جنرل', 'موٹر', 'گاڑی', 'سفر', 'عمرہ', 'گھر'].some((t) => query.includes(t));
+
+  // Always include core PQFTL overview so scope is crystal clear
   const scored = KNOWLEDGE_BASE_DOCS.map((doc) => {
-    let score = doc.id === 'guide-company-overview' ? 2 : 0;
+    let score = doc.id === 'guide-pqftl-overview' ? 2 : 0;
     const haystack = `${doc.title} ${doc.content} ${doc.keywords.join(' ')}`.toLowerCase();
 
     for (const token of expandedTokens) {
@@ -355,18 +407,14 @@ export function retrieveRelevantKnowledge(query: string, maxDocs = 6): Knowledge
       if (haystack.includes(token)) score += 1.5;
     }
 
-    // Specific intent boosts
     if (
-      (normalized.includes('family') || query.includes('خاندانی')) &&
+      (normalized.includes('family') || query.includes('خاندانی') || query.includes('فیملی')) &&
       doc.category === 'family-product'
     ) {
       score += 4;
     }
-    if (
-      (normalized.includes('general') || query.includes('جنرل')) &&
-      doc.category === 'general-product'
-    ) {
-      score += 4;
+    if (isOutOfScopeGeneralQuery && doc.id === 'guide-general-takaful-referral') {
+      score += 18;
     }
     if (
       (normalized.includes('takaful') || normalized.includes('shariah') || query.includes('تکافل')) &&

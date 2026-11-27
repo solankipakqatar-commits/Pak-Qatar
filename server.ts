@@ -135,7 +135,7 @@ function buildAuthenticatedContextText(rawSnapshot: unknown): string {
     'Active/Expired Certificates:',
     ...certs.map(
       (c) =>
-        `- ${c.certificateNumber}: ${c.productName} (${c.entity === 'family' ? 'PQFTL' : 'PQGTL'}), Status: ${c.status}, Contribution: PKR ${Number(c.contributionAmountPkr).toLocaleString()} (${c.frequency}), Next Due: ${c.nextDueDate}${c.participantInvestmentAccountPkr ? `, Illustrative PIA Value: PKR ${Number(c.participantInvestmentAccountPkr).toLocaleString()}` : ''}`
+        `- ${c.certificateNumber}: ${c.productName} (PQFTL), Status: ${c.status}, Contribution: PKR ${Number(c.contributionAmountPkr).toLocaleString()} (${c.frequency}), Next Due: ${c.nextDueDate}${c.participantInvestmentAccountPkr ? `, Illustrative PIA Value: PKR ${Number(c.participantInvestmentAccountPkr).toLocaleString()}` : ''}`
     ),
     'Contributions & Payment Records:',
     ...pays.map(
@@ -155,7 +155,6 @@ function buildAuthenticatedContextText(rawSnapshot: unknown): string {
 const VALID_ACTIONS = new Set([
   'none',
   'family-plans',
-  'general-plans',
   'calculator',
   'shariah',
   'login',
@@ -234,7 +233,7 @@ async function createServer() {
         res.json({
           reply: privacyReply,
           suggestedAction: 'support',
-          sources: ['PQFS Security & Privacy Policy'],
+          sources: ['PQFTL Security & Privacy Policy'],
           knowledgeBaseUpdatedAt: KNOWLEDGE_BASE_LAST_UPDATED,
           authenticatedAccess: Boolean(getValidSession(req)),
           mode: 'privacy-guard',
@@ -273,20 +272,21 @@ async function createServer() {
         : 'AUTHENTICATED: NO (Guest user). Do NOT reveal any personal certificates, payments, or claim statuses. If the customer asks to track personal claims, payments, or certificates, clearly guide them to Customer Login and set suggestedAction to "login".';
 
       const systemInstruction = [
-        'You are the official "Pak-Qatar Assistant" for Pak-Qatar Financial Services (PQFS), representing Pak-Qatar Family Takaful Limited (PQFTL) and Pak-Qatar General Takaful Limited (PQGTL).',
+        'You are the official "Pak-Qatar Assistant" for Pak-Qatar Family Takaful Limited (PQFTL).',
         '',
         'CORE RULES (STRICT):',
         '1. LANGUAGE: Match the customer language. If language preference is "ur" or the customer writes in Urdu, reply in clear, polite, natural Urdu. Otherwise reply in clear, friendly English.',
         '2. CONCISE & HELPFUL: Keep answers short, structured, and easy to scan on mobile (2–4 concise sentences or brief numbered steps).',
-        '3. ACCURACY & ZERO FABRICATION: Rely ONLY on the VERIFIED PAK-QATAR KNOWLEDGE BASE and (if authenticated) AUTHENTICATED ACCOUNT DATA below. NEVER invent rates, guaranteed returns, policy wording, exclusions, or unverified figures. Always respect strict separation between Family Takaful (PQFTL) and General Takaful (PQGTL).',
-        '4. UNVERIFIED QUESTIONS: If information is not present in the verified context, clearly state that you cannot verify it here and direct the customer to UAN (021) 111-825-238 (111-TAKAFUL) or info@pakqatar.com.pk.',
-        '5. NO PERSONAL ADVICE OR FATWAS: Do not provide personalized financial/investment recommendations or formal Shariah rulings/fatwas. Refer formal Shariah documentation queries to official published PQFTL/PQGTL Shariah Supervisory Board certificates.',
-        '6. SECURITY & PRIVACY: Never request passwords, PINs, OTPs, or full CNIC numbers. Require sign-in before displaying any personal account, payment, certificate, or claim records.',
-        '7. SUGGESTED ACTION: Pick the single most helpful "suggestedAction" from: "none", "family-plans", "general-plans", "calculator", "shariah", "login", "certificates", "payments", "claims", "elaaj", "support".',
+        '3. ACCURACY & ZERO FABRICATION: Rely ONLY on the VERIFIED PAK-QATAR FAMILY TAKAFUL KNOWLEDGE BASE and (if authenticated) AUTHENTICATED ACCOUNT DATA below. NEVER invent rates, guaranteed returns, policy wording, exclusions, or unverified figures.',
+        '4. OUT-OF-SCOPE GENERAL TAKAFUL INQUIRIES: This application serves Pak-Qatar Family Takaful Limited (PQFTL) exclusively. If a customer asks about General Takaful, Motor, Travel, Home/Fire, or Marine/Cargo coverage, politely explain that this app is dedicated exclusively to Family Takaful (PQFTL) and direct them to official Pak-Qatar channels: UAN (021) 111-825-238 (111-TAKAFUL), info@pakqatar.com.pk, or www.pakqatar.com.pk, and set suggestedAction to "support".',
+        '5. UNVERIFIED QUESTIONS: If information is not present in the verified context, clearly state that you cannot verify it here and direct the customer to UAN (021) 111-825-238 (111-TAKAFUL) or info@pakqatar.com.pk.',
+        '6. NO PERSONAL ADVICE OR FATWAS: Do not provide personalized financial/investment recommendations or formal Shariah rulings/fatwas. Refer formal Shariah documentation queries to official published PQFTL Shariah Supervisory Board certificates.',
+        '7. SECURITY & PRIVACY: Never request passwords, PINs, OTPs, or full CNIC numbers. Require sign-in before displaying any personal account, payment, certificate, or claim records.',
+        '8. SUGGESTED ACTION: Pick the single most helpful "suggestedAction" from: "none", "family-plans", "calculator", "shariah", "login", "certificates", "payments", "claims", "elaaj", "support".',
         '',
         `KNOWLEDGE BASE LAST UPDATED: ${KNOWLEDGE_BASE_LAST_UPDATED}`,
         '',
-        'VERIFIED PAK-QATAR KNOWLEDGE BASE:',
+        'VERIFIED PAK-QATAR FAMILY TAKAFUL KNOWLEDGE BASE:',
         ...relevantDocs.map(
           (doc, idx) => `[Source ${idx + 1}: ${doc.title} — ${doc.sourceLabel}]\n${doc.content}`
         ),
@@ -338,7 +338,7 @@ async function createServer() {
                   suggestedAction: {
                     type: Type.STRING,
                     description:
-                      'One of: none, family-plans, general-plans, calculator, shariah, login, certificates, payments, claims, elaaj, support',
+                      'One of: none, family-plans, calculator, shariah, login, certificates, payments, claims, elaaj, support',
                   },
                 },
                 required: ['reply', 'suggestedAction'],
@@ -442,7 +442,7 @@ async function createServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`PQFS server running on http://0.0.0.0:${PORT}`);
+    console.log(`PQFTL server running on http://0.0.0.0:${PORT}`);
   });
 }
 

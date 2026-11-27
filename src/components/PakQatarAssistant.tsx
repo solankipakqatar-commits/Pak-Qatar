@@ -24,7 +24,6 @@ import { DEMO_CUSTOMER, PQFS_VERIFIED_CONTACT } from '../data/pqfsData';
 export type AssistantNavigationAction =
   | 'none'
   | 'family-plans'
-  | 'general-plans'
   | 'calculator'
   | 'shariah'
   | 'login'
@@ -91,7 +90,7 @@ type SpeechRecognitionConstructor = new () => SpeechRecognitionInstance;
 
 const SUGGESTED_QUESTIONS_EN = [
   'Explore Family Takaful Plans',
-  'Explore General Takaful Plans',
+  'Explore Elaaj Health & Education Plans',
   'How does Takaful work?',
   'How can I make a payment?',
   'How do I submit a claim?',
@@ -100,7 +99,7 @@ const SUGGESTED_QUESTIONS_EN = [
 
 const SUGGESTED_QUESTIONS_UR = [
   'فیملی تکافل پلانز دیکھیں',
-  'جنرل تکافل پلانز دیکھیں',
+  'علاج ہیلتھ اور تعلیمی پلانز دیکھیں',
   'تکافل کیسے کام کرتا ہے؟',
   'میں ادائیگی کیسے کر سکتا ہوں؟',
   'کلیم کیسے جمع کرواؤں؟',
@@ -109,7 +108,6 @@ const SUGGESTED_QUESTIONS_UR = [
 
 const ACTION_LABELS_EN: Record<Exclude<AssistantNavigationAction, 'none'>, string> = {
   'family-plans': 'Open Family Takaful Plans',
-  'general-plans': 'Open General Takaful Plans',
   calculator: 'Open Contribution Calculator',
   shariah: 'Open Shariah Transparency',
   login: 'Go to Customer Login',
@@ -122,7 +120,6 @@ const ACTION_LABELS_EN: Record<Exclude<AssistantNavigationAction, 'none'>, strin
 
 const ACTION_LABELS_UR: Record<Exclude<AssistantNavigationAction, 'none'>, string> = {
   'family-plans': 'فیملی تکافل پلانز دیکھیں',
-  'general-plans': 'جنرل تکافل پلانز دیکھیں',
   calculator: 'کیلکولیٹر کھولیں',
   shariah: 'شرعی معلومات دیکھیں',
   login: 'کسٹمر لاگ ان پر جائیں',
@@ -182,11 +179,11 @@ function getWelcomeMessage(lang: LanguageCode): ChatMessage {
     role: 'assistant',
     text:
       lang === 'ur'
-        ? 'السلام علیکم! میں پاک قطر اسسٹنٹ ہوں۔ میں پاک قطر فیملی تکافل (PQFTL) اور جنرل تکافل (PQGTL) کے پلانز، شرعی اصولوں، ادائیگیوں اور کلیمز کے بارے میں مستند معلومات فراہم کرنے کے لیے حاضر ہوں۔'
-        : 'Assalam-o-Alaikum! I am the Pak-Qatar Assistant. Ask me in English or Urdu about Family Takaful (PQFTL), General Takaful (PQGTL), Shariah concepts, payments, certificates, or claim guidance.',
+        ? 'السلام علیکم! میں پاک قطر اسسٹنٹ ہوں۔ میں پاک قطر فیملی تکافل (PQFTL) کے بچت، تعلیم، ریٹائرمنٹ/VPS، علاج ہیلتھ پلانز، شرعی اصولوں، ادائیگیوں اور کلیمز کے بارے میں مستند معلومات فراہم کرنے کے لیے حاضر ہوں۔'
+        : 'Assalam-o-Alaikum! I am the Pak-Qatar Assistant for Pak-Qatar Family Takaful (PQFTL). Ask me in English or Urdu about Family Savings, Child Education, Retirement & VPS, Elaaj Health plans, Shariah concepts, payments, certificates, or claim guidance.',
     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     mode: 'live-ai',
-    sources: ['Pak-Qatar Verified Knowledge Base'],
+    sources: ['Pak-Qatar Family Takaful Verified Knowledge Base'],
     knowledgeBaseUpdatedAt: '26 Nov 2026',
   };
 }
@@ -945,7 +942,7 @@ export const PakQatarAssistant: React.FC<PakQatarAssistantProps> = ({
                           <span className="truncate max-w-[230px]">
                             {msg.sources && msg.sources.length > 0
                               ? `${msg.sources[0]}${msg.authenticatedAccess ? ' · Account Linked' : ''}`
-                              : 'Official PQFS Channel'}
+                              : 'Official PQFTL Channel'}
                           </span>
                           <span className="tabular-nums">
                             {msg.knowledgeBaseUpdatedAt

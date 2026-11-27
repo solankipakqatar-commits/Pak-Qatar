@@ -17,17 +17,18 @@ export const DEMO_CUSTOMER = {
   maskedCnic: '42101-•••••••-3',
   fullCnicDemo: '42101-5839201-3',
   mobile: '0300-8241905',
-  email: 'ahmed.tariq@demo-pqfs.example',
+  email: 'ahmed.tariq@demo-pqftl.example',
   city: 'Karachi',
   elaajCardNumber: 'ELJ-PQF-2026-4418',
   elaajPlanName: 'Elaaj Family Healthcare (Illustrative Demo)',
 };
 
 export const TAKAFUL_PRODUCTS: TakafulProduct[] = [
-  // FAMILY TAKAFUL (PQFTL)
+  // FAMILY TAKAFUL (PQFTL) — SAVINGS, EDUCATION & RETIREMENT
   {
     id: 'ft-family-savings',
     entity: 'family',
+    category: 'savings-retirement',
     companyName: 'Pak-Qatar Family Takaful Limited (PQFTL)',
     name: 'Family Protection & Savings Plan',
     shortTagline: 'Shariah-compliant protection paired with long-term wealth accumulation.',
@@ -74,6 +75,7 @@ export const TAKAFUL_PRODUCTS: TakafulProduct[] = [
   {
     id: 'ft-child-education',
     entity: 'family',
+    category: 'savings-retirement',
     companyName: 'Pak-Qatar Family Takaful Limited (PQFTL)',
     name: 'Child Education Takaful Plan',
     shortTagline: 'Dedicated education milestone accumulation with parental protection.',
@@ -112,8 +114,49 @@ export const TAKAFUL_PRODUCTS: TakafulProduct[] = [
     isInvestmentLinked: true,
   },
   {
+    id: 'ft-mahana-bachat',
+    entity: 'family',
+    category: 'savings-retirement',
+    companyName: 'Pak-Qatar Family Takaful Limited (PQFTL)',
+    name: 'Mahana Bachat & Takaful Flexi Plan',
+    shortTagline: 'Disciplined monthly savings paired with flexible Family Takaful cover.',
+    mainBenefit: 'Accessible regular savings with customizable protection riders',
+    iconKey: 'briefcase',
+    overview:
+      'An investment-linked regular savings Family Takaful solution from PQFTL designed for salaried individuals and families seeking structured monthly accumulation alongside comprehensive Waqf protection.',
+    eligibility: [
+      'Individuals aged 18 to 60 years with valid CNIC / NICOP',
+      'Flexible term selection tailored to medium-term family goals',
+    ],
+    coverageInfo: [
+      'Death and accidental protection benefit via the PQFTL Waqf risk pool',
+      'Accumulated Participant Investment Account (PIA) balance payable at maturity',
+      'Optional critical illness and hospitalization rider enhancements',
+    ],
+    contributionInfo:
+      'Illustrative monthly savings starting from PKR 3,500/month; final illustrations are generated during formal underwriting.',
+    illustrativeMinContributionPkr: 3500,
+    illustrativeFrequency: 'Monthly / Quarterly / Annual',
+    keyConditions: [
+      'Investment unit growth depends on underlying Shariah-compliant fund performance.',
+      'Official terms and surrender schedules are governed by the issued PMD.',
+    ],
+    faqs: [
+      {
+        q: 'Is Mahana Bachat & Takaful Flexi Plan Shariah-compliant?',
+        a: 'Yes, all contributions follow PQFTL Waqf-Wakalah governance reviewed by the independent Shariah Supervisory Board.',
+      },
+    ],
+    documents: [
+      'Mahana Bachat Plan Overview (Demo)',
+      'Waqf & Unit Allocation Summary',
+    ],
+    isInvestmentLinked: true,
+  },
+  {
     id: 'ft-retirement-wealth',
     entity: 'family',
+    category: 'savings-retirement',
     companyName: 'Pak-Qatar Family Takaful Limited (PQFTL)',
     name: 'Retirement & Wealth Accumulation',
     shortTagline: 'Halal long-horizon retirement reserve with disciplined fund switching.',
@@ -150,22 +193,103 @@ export const TAKAFUL_PRODUCTS: TakafulProduct[] = [
     isInvestmentLinked: true,
   },
   {
+    id: 'ft-lifetime-kafalat',
+    entity: 'family',
+    category: 'savings-retirement',
+    companyName: 'Pak-Qatar Family Takaful Limited (PQFTL)',
+    name: 'Lifetime Kafalat Plan',
+    shortTagline: 'Shariah-compliant retirement income stream for post-career peace of mind.',
+    mainBenefit: 'Structured post-retirement income planning with family security',
+    iconKey: 'landmark',
+    overview:
+      'A dedicated PQFTL retirement and pension planning structure built to help participants transition accumulated halal savings into a dependable post-retirement income stream.',
+    eligibility: [
+      'Adult residents planning long-term post-retirement income streams',
+      'Subject to standard PQFTL underwriting and maturity age rules',
+    ],
+    coverageInfo: [
+      'Post-retirement periodic income options alongside Waqf protection',
+      'Continuity of family benefit in line with selected payout option',
+    ],
+    contributionInfo:
+      'Illustrative contribution starting from PKR 10,000/month depending on target retirement horizon.',
+    illustrativeMinContributionPkr: 10000,
+    illustrativeFrequency: 'Monthly / Annual',
+    keyConditions: [
+      'Payout structures depend on accumulated account value at retirement commencement.',
+      'All calculator estimates in this app are non-guaranteed demonstrations.',
+    ],
+    faqs: [
+      {
+        q: 'How is Lifetime Kafalat different from general savings?',
+        a: 'It focuses specifically on building a structured halal income stream for retirement years under PQFTL Family Takaful.',
+      },
+    ],
+    documents: [
+      'Lifetime Kafalat Plan Summary (Demo)',
+      'Retirement Payout Options Guide',
+    ],
+    isInvestmentLinked: true,
+  },
+  {
+    id: 'ft-vps-pension',
+    entity: 'family',
+    category: 'savings-retirement',
+    companyName: 'Pak-Qatar Family Takaful Limited (PQFTL)',
+    name: 'Voluntary Pension Scheme (VPS)',
+    shortTagline: 'Shariah-compliant dedicated pension fund accumulation for individuals.',
+    mainBenefit: 'Long-term halal pension accumulation across Shariah sub-funds',
+    iconKey: 'briefcase',
+    overview:
+      'PQFTL Voluntary Pension Scheme (VPS) supports long-term retirement saving through diversified Shariah-compliant sub-funds tailored to participant risk tolerance across working years.',
+    eligibility: [
+      'Salaried and self-employed individuals with valid CNIC / NICOP',
+      'Flexible contribution schedule based on individual retirement horizon',
+    ],
+    coverageInfo: [
+      'Dedicated Shariah-compliant pension sub-fund allocation options',
+      'Structured lump sum and income drawdown options at retirement age per applicable rules',
+    ],
+    contributionInfo:
+      'Illustrative contribution starting from PKR 5,000/month; tax credit eligibility follows prevailing Pakistan tax laws.',
+    illustrativeMinContributionPkr: 5000,
+    illustrativeFrequency: 'Monthly / Quarterly / Annual',
+    keyConditions: [
+      'Unit values fluctuate based on underlying Shariah market instruments.',
+      'Consult official PQFTL VPS offering documents and tax advisors for formal tax-credit computation.',
+    ],
+    faqs: [
+      {
+        q: 'Can I adjust my pension sub-fund mix over time?',
+        a: 'Yes, participants can rebalance allocation across conservative, balanced, and growth Shariah sub-funds per scheme rules.',
+      },
+    ],
+    documents: [
+      'PQFTL Voluntary Pension Overview (Demo)',
+      'Shariah Sub-Fund Allocation Note',
+    ],
+    isInvestmentLinked: true,
+  },
+
+  // FAMILY TAKAFUL (PQFTL) — HEALTH & CORPORATE GROUP
+  {
     id: 'ft-health-elaaj',
     entity: 'family',
+    category: 'health-group',
     companyName: 'Pak-Qatar Family Takaful Limited (PQFTL)',
     name: 'Individual & Family Elaaj Health',
-    shortTagline: 'In-patient hospitalization and surgical protection for households.',
+    shortTagline: 'Family Sehat & Elaaj hospitalization protection for households.',
     mainBenefit: 'Access to Digital Elaaj Card and panel hospital care',
     iconKey: 'heart',
     overview:
-      'Illustrative Family Health Takaful solution providing structured inpatient hospitalization limits, surgical support, and seamless digital Elaaj identification.',
+      'Illustrative PQFTL Family Health Takaful (Family Sehat & Elaaj) solution providing structured inpatient hospitalization limits, accidental emergency care, day-care procedures, and seamless digital Elaaj identification.',
     eligibility: [
       'Primary participant aged 18 to 60 years; eligible dependents per rules',
       'Health declaration required at onboarding',
     ],
     coverageInfo: [
-      'Annual inpatient hospitalization & surgical benefit tiers (illustrative)',
-      'Digital Elaaj health identification card & reimbursement pathway',
+      'Annual inpatient hospitalization, accidental emergency & surgical benefit tiers (illustrative)',
+      'Digital Elaaj health identification card & cashless / reimbursement pathway',
       'Pre- and post-hospitalization diagnostic support windows',
     ],
     contributionInfo:
@@ -191,20 +315,21 @@ export const TAKAFUL_PRODUCTS: TakafulProduct[] = [
   {
     id: 'ft-group-family',
     entity: 'family',
+    category: 'health-group',
     companyName: 'Pak-Qatar Family Takaful Limited (PQFTL)',
     name: 'Corporate Group Family Takaful',
-    shortTagline: 'Employer-sponsored Shariah protection for organizational teams.',
-    mainBenefit: 'Unified group life & hospitalization coverage via Corporate Portal',
+    shortTagline: 'Employer-sponsored Shariah life protection for organizational teams.',
+    mainBenefit: 'Unified group family protection via PQFTL Corporate Portal',
     iconKey: 'building',
     overview:
-      'Illustrative group Takaful protection designed for employers wishing to extend ethical, Shariah-compliant family security and medical benefits to employees.',
+      'Illustrative group Family Takaful protection designed for employers wishing to extend ethical, Shariah-compliant family financial security and optional benefits to employees.',
     eligibility: [
       'Registered companies and institutions in Pakistan (minimum group size applies)',
       'Administered via PQFTL Corporate Portal',
     ],
     coverageInfo: [
       'Group term protection tied to employee grade or salary multiples',
-      'Optional group health & accidental riders',
+      'Optional accidental protection and disability riders',
     ],
     contributionInfo:
       'Custom corporate quotation based on employee census and benefit design (illustrative).',
@@ -219,188 +344,42 @@ export const TAKAFUL_PRODUCTS: TakafulProduct[] = [
         a: 'Covered employees can access individual certificate summaries and Elaaj cards once onboarded by HR.',
       },
     ],
-    documents: ['Corporate Takaful Inquiry Brief (Demo)'],
-    isInvestmentLinked: false,
-  },
-
-  // GENERAL TAKAFUL (PQGTL)
-  {
-    id: 'gt-motor',
-    entity: 'general',
-    companyName: 'Pak-Qatar General Takaful Limited (PQGTL)',
-    name: 'Motor Takaful (Comprehensive)',
-    shortTagline: 'Shariah-compliant protection for private vehicles against theft and damage.',
-    mainBenefit: 'Accidental damage, theft, and third-party liability protection',
-    iconKey: 'car',
-    overview:
-      'Illustrative General Takaful motor cover protecting private vehicles against road accidents, theft, fire, and third-party claims through a mutual Waqf risk pool.',
-    eligibility: [
-      'Private cars registered in Pakistan with valid registration & owner CNIC',
-      'Pre-inspection survey where required for vehicle valuation',
-    ],
-    coverageInfo: [
-      'Accidental collision & own-damage protection (illustrative)',
-      'Total loss and vehicle theft indemnity',
-      'Third-party bodily injury & property damage liability',
-    ],
-    contributionInfo:
-      'Illustrative annual rate calculated as a percentage of declared vehicle value (IDV).',
-    illustrativeMinContributionPkr: 28000,
-    illustrativeFrequency: 'Annual',
-    keyConditions: [
-      'Illustrative motor rates exclude government levies and trackers where mandated.',
-      'Deductibles and depreciation scales apply per official PQGTL motor terms.',
-    ],
-    faqs: [
-      {
-        q: 'How do I initiate a motor claim?',
-        a: 'Report the incident immediately through Claims Centre, upload vehicle photos and inspection details, and track surveyor assessment live.',
-      },
-    ],
-    documents: [
-      'Motor Takaful Coverage Summary (Demo)',
-      'Motor Claim Inspection Checklist',
-    ],
+    documents: ['Corporate Family Takaful Brief (Demo)'],
     isInvestmentLinked: false,
   },
   {
-    id: 'gt-home-fire',
-    entity: 'general',
-    companyName: 'Pak-Qatar General Takaful Limited (PQGTL)',
-    name: 'Home & Fire Property Takaful',
-    shortTagline: 'Protect residential structures and household contents from fire and perils.',
-    mainBenefit: 'Structure, contents, fire, lightning, and allied perils protection',
-    iconKey: 'home',
+    id: 'ft-group-health',
+    entity: 'family',
+    category: 'health-group',
+    companyName: 'Pak-Qatar Family Takaful Limited (PQFTL)',
+    name: 'Corporate Group Health Takaful',
+    shortTagline: 'Comprehensive inpatient and panel healthcare cover for corporate teams.',
+    mainBenefit: 'Panel hospitalization & Digital Elaaj cards for employees and families',
+    iconKey: 'heart',
     overview:
-      'Illustrative property Takaful cover safeguarding residential homes and personal contents against fire, explosion, natural perils, and specified burglary risks.',
+      'PQFTL Corporate Group Health Takaful helps organizations safeguard employee and dependent wellbeing through tailored hospitalization schedules and Elaaj panel hospital access.',
     eligibility: [
-      'Homeowners or residential tenants in Pakistan',
-      'Accurate declared replacement value of structure and/or contents',
+      'Corporate employers, NGOs, and institutions operating in Pakistan',
+      'Employee & eligible dependent census submitted by employer HR',
     ],
     coverageInfo: [
-      'Building structure protection against fire and allied perils',
-      'Household contents and electrical appliance safeguards',
-      'Alternative accommodation support clause (illustrative)',
+      'Cashless panel hospital admission via Digital Elaaj identification',
+      'Inpatient room & surgical tiers plus maternity and OPD options per employer schedule',
     ],
     contributionInfo:
-      'Illustrative annual contribution starting from PKR 8,500/year depending on sum covered.',
-    illustrativeMinContributionPkr: 8500,
-    illustrativeFrequency: 'Annual',
+      'Custom corporate group rate based on employee demographics and chosen room-limit tier (illustrative).',
+    illustrativeMinContributionPkr: 20000,
+    illustrativeFrequency: 'Annual Corporate Schedule',
     keyConditions: [
-      'Valuation based on reinstatement or market value as selected in the certificate.',
+      'Benefits follow employer-selected schedule limits and corporate master agreement.',
     ],
     faqs: [
       {
-        q: 'Can tenants cover household contents without owning the building?',
-        a: 'Yes, contents-only property Takaful can be structured separately from building structure cover.',
+        q: 'Does Corporate Group Health include Elaaj App support?',
+        a: 'Yes, covered employees can present their Digital Elaaj Health Card and search panel hospitals directly in the app.',
       },
     ],
-    documents: ['Property & Fire Takaful Brief (Demo)'],
-    isInvestmentLinked: false,
-  },
-  {
-    id: 'gt-travel',
-    entity: 'general',
-    companyName: 'Pak-Qatar General Takaful Limited (PQGTL)',
-    name: 'Travel & Umrah Takaful',
-    shortTagline: 'Emergency medical, baggage, and trip-delay support for international journeys.',
-    mainBenefit: 'Worldwide emergency medical and travel disruption coverage',
-    iconKey: 'plane',
-    overview:
-      'Illustrative international travel and Umrah/Ziyarat Takaful providing emergency medical evacuation, hospitalization, baggage delay, and passport loss assistance.',
-    eligibility: [
-      'Pakistani travellers departing from Pakistan with valid passport and travel dates',
-      'Single-trip and multi-trip illustrative options',
-    ],
-    coverageInfo: [
-      'Overseas emergency medical & hospitalization expenses',
-      'Checked baggage delay / loss & flight delay assistance',
-      '24/7 international emergency assistance helpline',
-    ],
-    contributionInfo:
-      'Illustrative trip contribution starting from PKR 3,500 per trip depending on destination and duration.',
-    illustrativeMinContributionPkr: 3500,
-    illustrativeFrequency: 'Per Trip / Annual Multi-Trip',
-    keyConditions: [
-      'Must be issued prior to departure from Pakistan.',
-      'Limits vary by Schengen, Worldwide, or Regional/Umrah travel tier.',
-    ],
-    faqs: [
-      {
-        q: 'Do I receive an instant digital certificate for visa applications?',
-        a: 'Once issued through verified onboarding, digital certificates can be downloaded directly from My Certificates.',
-      },
-    ],
-    documents: ['Travel Tier Comparison Sheet (Demo)'],
-    isInvestmentLinked: false,
-  },
-  {
-    id: 'gt-healthcare-corp',
-    entity: 'general',
-    companyName: 'Pak-Qatar General Takaful Limited (PQGTL)',
-    name: 'General Healthcare & Accident',
-    shortTagline: 'Personal accident and outpatient/inpatient general medical protection.',
-    mainBenefit: '24/7 worldwide accidental protection and medical support',
-    iconKey: 'umbrella',
-    overview:
-      'Illustrative General Takaful personal accident and medical reimbursement cover offering financial relief following accidental injuries or unforeseen hospitalization.',
-    eligibility: [
-      'Individuals aged 18 to 65 years (illustrative)',
-      'Occupation class declaration required',
-    ],
-    coverageInfo: [
-      'Accidental medical expense reimbursement',
-      'Permanent total or partial disability capital benefit',
-      'Hospital daily cash allowance option',
-    ],
-    contributionInfo:
-      'Illustrative annual contribution starting from PKR 4,000/year.',
-    illustrativeMinContributionPkr: 4000,
-    illustrativeFrequency: 'Annual',
-    keyConditions: [
-      'Pure risk-pool General Takaful certificate with no investment/savings component.',
-    ],
-    faqs: [
-      {
-        q: 'How is General Health/Accident different from Family Takaful savings?',
-        a: 'General Takaful is pure annual risk protection under PQGTL without a long-term investment unit account.',
-      },
-    ],
-    documents: ['Personal Accident Summary (Demo)'],
-    isInvestmentLinked: false,
-  },
-  {
-    id: 'gt-marine-sme',
-    entity: 'general',
-    companyName: 'Pak-Qatar General Takaful Limited (PQGTL)',
-    name: 'Marine, Cargo & SME Takaful',
-    shortTagline: 'Transit and commercial asset protection for businesses and traders.',
-    mainBenefit: 'In-transit cargo, stock, and commercial premises safeguards',
-    iconKey: 'briefcase',
-    overview:
-      'Illustrative commercial General Takaful helping SMEs, importers, and distributors protect goods in transit and commercial stock under Shariah-compliant terms.',
-    eligibility: [
-      'Registered sole proprietors, SMEs, and corporate entities',
-      'Shipment invoice / commercial inventory valuation',
-    ],
-    coverageInfo: [
-      'Inland transit and marine cargo perils coverage',
-      'Warehouse stock & commercial fire protection',
-    ],
-    contributionInfo:
-      'Illustrative rating based on cargo type, route, and declared shipment value.',
-    illustrativeMinContributionPkr: 15000,
-    illustrativeFrequency: 'Per Shipment / Annual Open Cover',
-    keyConditions: [
-      'Subject to Institute Cargo Clauses (Takaful adapted) and underwriting review.',
-    ],
-    faqs: [
-      {
-        q: 'Can SMEs manage multiple transit certificates?',
-        a: 'Yes, corporate participants can request open marine policies or single-shipment certificates.',
-      },
-    ],
-    documents: ['Marine & SME Coverage Overview (Demo)'],
+    documents: ['Corporate Group Health Overview (Demo)'],
     isInvestmentLinked: false,
   },
 ];
@@ -445,40 +424,40 @@ export const DEMO_CERTIFICATES: TakafulCertificate[] = [
     coveredAssetOrPlan: 'Higher Education Reserve (Age 18 Target)',
   },
   {
-    id: 'cert-gt-1',
-    certificateNumber: 'PQGTL-MTR-2026-55219',
-    entity: 'general',
-    companyLabel: 'Pak-Qatar General Takaful Limited (PQGTL)',
-    productId: 'gt-motor',
-    productName: 'Motor Takaful (Comprehensive)',
+    id: 'cert-ft-3',
+    certificateNumber: 'PQFTL-ELJ-2026-44180',
+    entity: 'family',
+    companyLabel: 'Pak-Qatar Family Takaful Limited (PQFTL)',
+    productId: 'ft-health-elaaj',
+    productName: 'Individual & Family Elaaj Health',
     status: 'Active',
     issueDate: '01 Feb 2026',
     maturityOrRenewalDate: '31 Jan 2027',
-    coveredBenefitPkr: 4200000,
-    contributionAmountPkr: 79800,
+    coveredBenefitPkr: 1500000,
+    contributionAmountPkr: 24000,
     frequency: 'Annual',
     nextDueDate: '31 Jan 2027',
-    tabarruAllocationNote: 'Pure PQGTL General Waqf risk-pool certificate (no savings unit account).',
-    nomineeName: 'Ahmed Tariq (Owner)',
-    coveredAssetOrPlan: 'Private Sedan · Reg. BXY-418 (Illustrative)',
+    tabarruAllocationNote: 'Pure PQFTL Family Health Waqf protection with Digital Elaaj Card access.',
+    nomineeName: 'Ahmed Tariq & Household (3 Members)',
+    coveredAssetOrPlan: 'Family Inpatient & Elaaj Health Cover (Illustrative)',
   },
   {
-    id: 'cert-gt-2',
-    certificateNumber: 'PQGTL-TRV-2025-30811',
-    entity: 'general',
-    companyLabel: 'Pak-Qatar General Takaful Limited (PQGTL)',
-    productId: 'gt-travel',
-    productName: 'Travel & Umrah Takaful',
+    id: 'cert-ft-4',
+    certificateNumber: 'PQFTL-MHB-2021-30811',
+    entity: 'family',
+    companyLabel: 'Pak-Qatar Family Takaful Limited (PQFTL)',
+    productId: 'ft-mahana-bachat',
+    productName: 'Mahana Bachat & Takaful Flexi Plan',
     status: 'Expired',
-    issueDate: '04 Nov 2025',
-    maturityOrRenewalDate: '25 Nov 2025',
-    coveredBenefitPkr: 5000000,
-    contributionAmountPkr: 6200,
-    frequency: 'Annual',
-    nextDueDate: 'Completed Trip',
-    tabarruAllocationNote: 'Single-trip Umrah Takaful certificate (expired naturally after return).',
+    issueDate: '04 Nov 2021',
+    maturityOrRenewalDate: '04 Nov 2026',
+    coveredBenefitPkr: 1200000,
+    contributionAmountPkr: 6000,
+    frequency: 'Monthly',
+    nextDueDate: 'Matured Term',
+    tabarruAllocationNote: '5-year savings & protection certificate completed full maturity schedule.',
     nomineeName: 'Tariq Mahmood (Father)',
-    coveredAssetOrPlan: '21-Day International Travel Cover',
+    coveredAssetOrPlan: '5-Year Completed Savings Term (Matured)',
   },
 ];
 
@@ -609,19 +588,19 @@ export const DEMO_PAYMENTS: ContributionPayment[] = [
   },
   {
     id: 'pay-hist-3',
-    referenceNumber: 'TXN-PQG-4102938',
-    certificateNumber: 'PQGTL-MTR-2026-55219',
-    productName: 'Motor Takaful (Comprehensive)',
-    entity: 'general',
+    referenceNumber: 'TXN-PQF-4102938',
+    certificateNumber: 'PQFTL-ELJ-2026-44180',
+    productName: 'Individual & Family Elaaj Health',
+    entity: 'family',
     dueDate: '01 Feb 2026',
     paidDate: '29 Jan 2026',
-    amountPkr: 79800,
+    amountPkr: 24000,
     status: 'Settled',
     paymentMethod: 'Islamic Bank Card (Demo)',
     allocationBreakdown: {
       investmentPortionPkr: 0,
-      tabarruWaqfPortionPkr: 59850,
-      wakalahFeePkr: 19950,
+      tabarruWaqfPortionPkr: 18000,
+      wakalahFeePkr: 6000,
     },
   },
 ];
@@ -629,18 +608,18 @@ export const DEMO_PAYMENTS: ContributionPayment[] = [
 export const DEMO_CLAIMS: TakafulClaim[] = [
   {
     id: 'clm-1',
-    referenceNumber: 'CLM-PQG-2026-1042',
-    certificateNumber: 'PQGTL-MTR-2026-55219',
-    productName: 'Motor Takaful (Comprehensive)',
-    entity: 'general',
-    claimType: 'Minor Bumper & Headlamp Repair',
+    referenceNumber: 'CLM-PQF-2026-1042',
+    certificateNumber: 'PQFTL-ELJ-2026-44180',
+    productName: 'Individual & Family Elaaj Health',
+    entity: 'family',
+    claimType: 'In-Patient Hospitalization & Surgical Care',
     incidentDate: '14 Nov 2026',
     submittedDate: '15 Nov 2026',
-    estimatedAmountPkr: 48500,
+    estimatedAmountPkr: 68500,
     currentStage: 'Under Assessment',
-    summary: 'Workshop repair estimate submitted after minor rear fender contact in Gulshan-e-Iqbal.',
-    documents: ['Repair Estimate Invoice.pdf', 'Vehicle Photos (4).zip', 'Driving License Copy.pdf'],
-    lastUpdatedNote: 'Surveyor inspection completed; repair authorization under final assessment (Demo).',
+    summary: 'In-patient admission & surgical care reimbursement request submitted with hospital discharge summary.',
+    documents: ['Hospital Discharge Summary.pdf', 'Itemized Hospital Bill.pdf', 'Lab & Diagnostic Reports.pdf'],
+    lastUpdatedNote: 'Medical officer document review completed; reimbursement approval under final assessment (Demo).',
   },
   {
     id: 'clm-2',
@@ -668,7 +647,7 @@ export const DEMO_FAMILY_MEMBERS: FamilyMember[] = [
     relationship: 'Self (Participant)',
     role: 'Primary Participant',
     dateOfBirth: '18 May 1988',
-    certificateNumbers: ['PQFTL-FAM-2023-09412', 'PQFTL-EDU-2024-11804', 'PQGTL-MTR-2026-55219'],
+    certificateNumbers: ['PQFTL-FAM-2023-09412', 'PQFTL-EDU-2024-11804', 'PQFTL-ELJ-2026-44180'],
     elaajCovered: true,
   },
   {
@@ -678,7 +657,7 @@ export const DEMO_FAMILY_MEMBERS: FamilyMember[] = [
     relationship: 'Son',
     role: 'Beneficiary / Nominee',
     dateOfBirth: '09 Jan 2018',
-    certificateNumbers: ['PQFTL-FAM-2023-09412', 'PQFTL-EDU-2024-11804'],
+    certificateNumbers: ['PQFTL-FAM-2023-09412', 'PQFTL-EDU-2024-11804', 'PQFTL-ELJ-2026-44180'],
     elaajCovered: true,
     sharePercent: 75,
   },
@@ -689,7 +668,7 @@ export const DEMO_FAMILY_MEMBERS: FamilyMember[] = [
     relationship: 'Father',
     role: 'Covered Dependent',
     dateOfBirth: '11 Nov 1958',
-    certificateNumbers: ['PQFTL-FAM-2023-09412'],
+    certificateNumbers: ['PQFTL-FAM-2023-09412', 'PQFTL-ELJ-2026-44180'],
     elaajCovered: true,
     sharePercent: 25,
   },
@@ -771,10 +750,10 @@ export const DEMO_NOTIFICATIONS: AppNotification[] = [
   },
   {
     id: 'not-2',
-    title: 'Motor Claim Under Assessment',
-    detail: 'Claim CLM-PQG-2026-1042 surveyor report received and moving toward decision.',
+    title: 'Elaaj Health Claim Under Assessment',
+    detail: 'Claim CLM-PQF-2026-1042 medical records reviewed and moving toward final decision.',
     timestamp: 'Yesterday',
-    entity: 'general',
+    entity: 'family',
     read: false,
   },
   {
@@ -803,7 +782,7 @@ export const SHARIAH_MODULES = [
     id: 'waqf',
     title: 'Waqf (Endowment Pool)',
     summary:
-      'Under the Pak-Qatar Waqf-Wakalah model, a dedicated Waqf Fund (Participant Takaful Fund) is established as a separate legal entity to provide mutual financial relief to participants.',
+      'Under the Pak-Qatar Family Takaful Waqf-Wakalah model, a dedicated Waqf Fund (Participant Takaful Fund) is established as a separate legal entity to provide mutual financial relief to participants.',
     keyPoints: [
       'Contributions earmarked as Tabarru enter the Waqf pool.',
       'Claims and defined Takaful benefits are paid out from the Waqf pool.',
@@ -834,21 +813,22 @@ export const SHARIAH_MODULES = [
     id: 'governance',
     title: 'Shariah Governance & Reviews',
     summary:
-      'Pak-Qatar Takaful operations are overseen by an independent Shariah Supervisory Board and undergo periodic Shariah compliance audits across product structures and investments.',
+      'Pak-Qatar Family Takaful operations are overseen by an independent Shariah Supervisory Board and undergo periodic Shariah compliance audits across product structures and investments.',
     keyPoints: [
       'All product wordings, Waqf deeds, and investment universes require Shariah review.',
-      'No religious rulings or approvals are fabricated in this demonstration interface; consult official published PQFTL/PQGTL Shariah certificates for formal documentation.',
+      'No religious rulings or approvals are fabricated in this demonstration interface; consult official published PQFTL Shariah certificates for formal documentation.',
     ],
   },
 ];
 
 export const PQFS_VERIFIED_CONTACT = {
-  companyGroup: 'Pak-Qatar Financial Services (PQFTL & PQGTL)',
+  companyGroup: 'Pak-Qatar Family Takaful Limited (PQFTL)',
   headOffice: 'Suite 102–105, Business Arcade, Block 6 PECHS, Shahrah-e-Faisal, Karachi',
   uan: '(021) 111-825-238 (111-TAKAFUL)',
   email: 'info@pakqatar.com.pk',
-  website: 'www.pakqatar.com.pk',
-  whatsappInfo: 'Official PQFS WhatsApp Self-Service (via verified PQFS helpline)',
+  website: 'www.pqftl.com.pk',
+  groupWebsite: 'www.pakqatar.com.pk',
+  whatsappInfo: 'Official PQFTL WhatsApp Self-Service (via verified helpline)',
 };
 
 export const DEMO_BRANCHES = [
@@ -881,10 +861,10 @@ export const DEMO_AGENTS = [
     status: 'Verified Active Consultant (Demo)',
   },
   {
-    code: 'PQG-AGT-2088',
+    code: 'PQF-AGT-2088',
     name: 'Faisal Mehmood',
     region: 'Lahore Central',
-    entity: 'Pak-Qatar General Takaful',
+    entity: 'Pak-Qatar Family Takaful',
     status: 'Verified Active Consultant (Demo)',
   },
 ];
@@ -892,30 +872,30 @@ export const DEMO_AGENTS = [
 export const EXISTING_VS_PROPOSED_SERVICES = [
   {
     service: 'My Account & Digital Account Opening',
-    status: 'Existing PQFS Web Service · Unified in Mobile Demo',
+    status: 'Existing PQFTL Web Service · Unified in Mobile Demo',
   },
   {
     service: 'Account Statement & Investment Details',
-    status: 'Existing PQFS Web Service · Interactive Fund View in App',
+    status: 'Existing PQFTL Web Service · Interactive Fund View in App',
   },
   {
     service: 'Online Contribution Collection & Instant Withdrawal',
-    status: 'Existing PQFS Web Service · Guided 4-Step Flow in App',
+    status: 'Existing PQFTL Web Service · Guided 4-Step Flow in App',
   },
   {
     service: 'Elaaj Portal & Corporate Portal',
-    status: 'Existing PQFS Service · Digital Elaaj Card & Search in App',
+    status: 'Existing PQFTL Service · Digital Elaaj Card & Search in App',
   },
   {
     service: 'Claims, Grievances, Branch Directory & Agent Network',
-    status: 'Existing PQFS Service · Integrated Claims Timeline & Lookup',
+    status: 'Existing PQFTL Service · Integrated Claims Timeline & Lookup',
   },
   {
     service: 'WhatsApp Self Service',
-    status: 'Existing PQFS Channel · Quick Launch from Support Centre',
+    status: 'Existing PQFTL Channel · Quick Launch from Support Centre',
   },
   {
-    service: '360° Rotating Takaful Product Selector',
+    service: '360° Rotating Family Takaful Product Selector',
     status: 'Proposed Mobile App Signature Capability',
   },
   {

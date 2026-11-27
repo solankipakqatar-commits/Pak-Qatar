@@ -18,7 +18,7 @@ import {
 import { LanguageCode } from '../types/pqfs';
 import { DEMO_CUSTOMER, PQFS_VERIFIED_CONTACT } from '../data/pqfsData';
 import { PakQatarLogo } from './BrandAssets';
-import { PqTabSwap } from './MotionPrimitives';
+import { PqTabSwap, TransitionDirection } from './MotionPrimitives';
 
 interface WelcomeViewProps {
   language: LanguageCode;
@@ -216,7 +216,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
   onOpenContact,
 }) => {
   const [identifier, setIdentifier] = useState(DEMO_CUSTOMER.customerId);
-  const [password, setPassword] = useState('PQFS@Demo2026');
+  const [password, setPassword] = useState('PQFTL@Demo2026');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [forgotMode, setForgotMode] = useState(false);
@@ -259,7 +259,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
             <PakQatarLogo variant="medium" />
           </div>
 
-          <PqTabSwap swapKey={forgotMode ? 'forgot' : 'login'}>
+          <PqTabSwap swapKey={forgotMode ? 'forgot' : 'login'} direction={forgotMode ? 'forward' : 'back'}>
             {!forgotMode ? (
               <div>
               <div className="text-center mt-5">
@@ -445,6 +445,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
   // Step 1 mirrors Screen 5 ("Create Your Account": CNIC + Mobile + Create Password),
   // followed smoothly by OTP (Step 2), Confirm Password (Step 3), and Confirmation (Step 4).
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [stepDir, setStepDir] = useState<TransitionDirection>('forward');
   const [cnic, setCnic] = useState('42101-5839201-3');
   const [mobile, setMobile] = useState('0300-8241905');
   const [password, setPassword] = useState('');
@@ -476,18 +477,21 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
         return;
       }
       setCountdown(45);
+      setStepDir('forward');
       setStep(2);
     } else if (step === 2) {
       if (otp.trim().length !== 6) {
         setError('Enter the 6-digit verification code (Demo OTP: 123456).');
         return;
       }
+      setStepDir('forward');
       setStep(3);
     } else if (step === 3) {
       if (password !== confirmPassword) {
         setError('Passwords do not match. Please re-enter to confirm.');
         return;
       }
+      setStepDir('forward');
       setStep(4);
     }
   };
@@ -496,17 +500,23 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
     <div className="min-h-screen bg-[#EAF3EE] flex flex-col justify-center px-4 py-6 sm:px-6">
       <div className="max-w-md w-full mx-auto">
         <motion.div
-          key={step}
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25 }}
+          transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
           className="bg-white rounded-3xl border border-[#E5E7EB] p-6 sm:p-7 shadow-sm"
         >
           {/* Reference Screen 5 Header: Back Arrow + Centered Official Logo */}
           <div className="relative flex items-center justify-center min-h-[44px]">
             <button
               type="button"
-              onClick={() => (step > 1 && step < 4 ? setStep((s) => (s - 1) as typeof step) : onBack())}
+              onClick={() => {
+                if (step > 1 && step < 4) {
+                  setStepDir('back');
+                  setStep((s) => (s - 1) as typeof step);
+                } else {
+                  onBack();
+                }
+              }}
               aria-label="Back"
               className="absolute left-0 min-h-[44px] min-w-[44px] flex items-center justify-start text-[#A32035] hover:opacity-80"
             >
@@ -527,13 +537,14 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
             {[1, 2, 3, 4].map((idx) => (
               <div
                 key={idx}
-                className={`h-1.5 rounded-full transition-colors ${
+                className={`h-1.5 rounded-full transition-colors duration-300 ${
                   idx <= step ? 'bg-[#A32035]' : 'bg-[#E5E7EB]'
                 }`}
               />
             ))}
           </div>
 
+          <PqTabSwap swapKey={String(step)} direction={stepDir}>
           {step === 1 && (
             <div className="mt-5">
               <div className="text-center">
@@ -656,7 +667,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               </div>
               <h1 className="mt-4 text-xl font-bold text-[#1E2022]">Account Created (Demo)</h1>
               <p className="mt-1.5 text-sm text-[#5C6066]">
-                Your digital PQFS profile for CNIC <span className="font-medium text-[#1E2022]">42101-•••••••-3</span> is ready.
+                Your digital PQFTL profile for CNIC <span className="font-medium text-[#1E2022]">42101-•••••••-3</span> is ready.
               </p>
               <div className="mt-4 p-3 rounded-xl bg-[#F7F5F2] border border-[#E5E7EB] text-xs text-[#5C6066]">
                 Reference ID: <span className="font-semibold text-[#1E2022]">REG-PQF-2026-8410</span>
@@ -672,6 +683,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               </button>
             </div>
           )}
+          </PqTabSwap>
 
           {error && (
             <p className="mt-3 text-xs font-medium text-[#A32035]" role="alert">

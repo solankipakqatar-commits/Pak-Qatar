@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import {
   Building2,
   CheckCircle2,
@@ -13,7 +14,15 @@ import {
 } from 'lucide-react';
 import { ElaajProvider, FamilyMember } from '../types/pqfs';
 import { DEMO_CUSTOMER, DEMO_ELAAJ_PROVIDERS } from '../data/pqfsData';
-import { PqModal, PqTabSwap } from './MotionPrimitives';
+import {
+  PQ_EASE,
+  PqModal,
+  PqSelect,
+  PqStaggerGroup,
+  PqStaggerItem,
+  PqTabSwap,
+  useScreenTransition,
+} from './MotionPrimitives';
 
 interface FamilyAndElaajViewProps {
   isAuthenticated: boolean;
@@ -36,6 +45,7 @@ export const FamilyAndElaajView: React.FC<FamilyAndElaajViewProps> = ({
   onRequireLogin,
   onGoToClaims,
 }) => {
+  const { direction } = useScreenTransition();
   const [localMode, setLocalMode] = useState<'family' | 'elaaj'>(initialMode);
   const subMode = mode ?? localMode;
   const setSubMode = (nextMode: 'family' | 'elaaj') => {
@@ -107,36 +117,46 @@ export const FamilyAndElaajView: React.FC<FamilyAndElaajViewProps> = ({
         </div>
 
         <div className="inline-flex p-1 rounded-xl bg-[#F4F4F5] border border-[#E5E7EB]">
-          <button
-            type="button"
-            onClick={() => setSubMode('family')}
-            className={`min-h-[40px] px-3.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-              subMode === 'family' ? 'bg-white text-[#A32035] shadow-sm' : 'text-[#5C6066]'
-            }`}
-          >
-            Family & Nominees
-          </button>
-          <button
-            type="button"
-            onClick={() => setSubMode('elaaj')}
-            className={`min-h-[40px] px-3.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-              subMode === 'elaaj' ? 'bg-white text-[#007A48] shadow-sm' : 'text-[#5C6066]'
-            }`}
-          >
-            Elaaj Health Services
-          </button>
+          {(
+            [
+              { key: 'family', label: 'Family & Nominees', activeText: 'text-[#A32035]' },
+              { key: 'elaaj', label: 'Elaaj Health Services', activeText: 'text-[#007A48]' },
+            ] as const
+          ).map((item) => {
+            const active = subMode === item.key;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setSubMode(item.key)}
+                className={`relative min-h-[40px] px-3.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                  active ? item.activeText : 'text-[#5C6066] hover:text-[#1E2022]'
+                }`}
+              >
+                {active && (
+                  <motion.span
+                    layoutId="family-mode-pill"
+                    transition={{ duration: 0.24, ease: PQ_EASE }}
+                    className="absolute inset-0 rounded-lg bg-white shadow-sm"
+                    aria-hidden="true"
+                  />
+                )}
+                <span className="relative z-10">{item.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <PqTabSwap swapKey={subMode}>
+      <PqTabSwap swapKey={subMode} direction={direction}>
       {/* Sub-mode 1: My Family & Beneficiaries (Monogram-only non-human icons, strictly compliant) */}
       {subMode === 'family' && (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <PqStaggerGroup className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {familyMembers.map((member) => (
+              <PqStaggerItem key={member.id}>
               <div
-                key={member.id}
-                className="pq-card-interactive rounded-2xl border border-[#E5E7EB] bg-white p-5 flex flex-col justify-between"
+                className="pq-card-interactive h-full rounded-2xl border border-[#E5E7EB] bg-white p-5 flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center gap-3">
@@ -194,8 +214,9 @@ export const FamilyAndElaajView: React.FC<FamilyAndElaajViewProps> = ({
                   </button>
                 )}
               </div>
+              </PqStaggerItem>
             ))}
-          </div>
+          </PqStaggerGroup>
         </div>
       )}
 
@@ -282,28 +303,28 @@ export const FamilyAndElaajView: React.FC<FamilyAndElaajViewProps> = ({
                   className="w-full min-h-[42px] pl-9 pr-3 rounded-xl border border-[#E5E7EB] text-xs"
                 />
               </div>
-              <select
-                aria-label="Filter by city"
+              <PqSelect
+                ariaLabel="Filter by city"
                 value={cityFilter}
-                onChange={(e) => setCityFilter(e.target.value)}
-                className="min-h-[42px] px-3 rounded-xl border border-[#E5E7EB] text-xs bg-white"
-              >
-                <option value="All">All Cities</option>
-                <option value="Karachi">Karachi</option>
-                <option value="Lahore">Lahore</option>
-                <option value="Islamabad">Islamabad</option>
-              </select>
-              <select
-                aria-label="Filter by provider type"
+                onChange={setCityFilter}
+                options={[
+                  { value: 'All', label: 'All Cities' },
+                  { value: 'Karachi', label: 'Karachi' },
+                  { value: 'Lahore', label: 'Lahore' },
+                  { value: 'Islamabad', label: 'Islamabad' },
+                ]}
+              />
+              <PqSelect
+                ariaLabel="Filter by provider type"
                 value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="min-h-[42px] px-3 rounded-xl border border-[#E5E7EB] text-xs bg-white"
-              >
-                <option value="All">All Providers</option>
-                <option value="Hospital">Hospitals</option>
-                <option value="Specialist Physician">Specialist Physicians</option>
-                <option value="Diagnostic Centre">Diagnostic Centres</option>
-              </select>
+                onChange={setTypeFilter}
+                options={[
+                  { value: 'All', label: 'All Providers' },
+                  { value: 'Hospital', label: 'Hospitals' },
+                  { value: 'Specialist Physician', label: 'Specialist Physicians' },
+                  { value: 'Diagnostic Centre', label: 'Diagnostic Centres' },
+                ]}
+              />
             </div>
 
             <div className="divide-y divide-[#E5E7EB]">

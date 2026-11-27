@@ -12,7 +12,14 @@ import {
 } from 'lucide-react';
 import { ClaimStage, TakafulCertificate, TakafulClaim } from '../types/pqfs';
 import { ensureLoadingAssetsReady, ProcessingOverlay } from './BrandAssets';
-import { PQ_EASE, PqStaggerGroup, PqStaggerItem, PqTabSwap } from './MotionPrimitives';
+import {
+  PQ_EASE,
+  PqSelect,
+  PqStaggerGroup,
+  PqStaggerItem,
+  PqTabSwap,
+  TransitionDirection,
+} from './MotionPrimitives';
 
 const CLAIM_STAGES: ClaimStage[] = [
   'Submitted',
@@ -55,9 +62,10 @@ export const ClaimsView: React.FC<ClaimsViewProps> = ({
   const [summary, setSummary] = useState('');
   const [attachedDocs, setAttachedDocs] = useState<string[]>([
     'CNIC Copy (Verified Profile).pdf',
-    'Medical Discharge Summary / Repair Invoice.pdf',
+    'Hospital Discharge Summary & Itemized Bills.pdf',
   ]);
   const [submitStep, setSubmitStep] = useState<'details' | 'review' | 'done'>('details');
+  const [stepDir, setStepDir] = useState<TransitionDirection>('forward');
   const [processing, setProcessing] = useState(false);
   const [newClaimRef, setNewClaimRef] = useState('');
 
@@ -69,7 +77,7 @@ export const ClaimsView: React.FC<ClaimsViewProps> = ({
         <ClipboardList className="w-10 h-10 text-[#A32035] mx-auto" />
         <h1 className="mt-3 text-lg font-bold text-[#1E2022]">Claims Centre</h1>
         <p className="mt-1.5 text-sm text-[#5C6066] max-w-md mx-auto">
-          Sign in to submit Family or General Takaful claims, upload supporting documents, and follow the 5-stage claim assessment timeline.
+          Sign in to submit Family Takaful and Elaaj Health claims, upload supporting documents, and follow the 5-stage claim assessment timeline.
         </p>
         <button
           type="button"
@@ -106,9 +114,7 @@ export const ClaimsView: React.FC<ClaimsViewProps> = ({
     void ensureLoadingAssetsReady().then(() => {
       setProcessing(true);
       window.setTimeout(() => {
-        const ref = `CLM-${selectedCert.entity === 'family' ? 'PQF' : 'PQG'}-2026-${Math.floor(
-          1000 + Math.random() * 9000
-        )}`;
+        const ref = `CLM-PQF-2026-${Math.floor(1000 + Math.random() * 9000)}`;
         const created: TakafulClaim = {
           id: `clm-${Date.now()}`,
           referenceNumber: ref,
@@ -129,6 +135,7 @@ export const ClaimsView: React.FC<ClaimsViewProps> = ({
         onClaimSubmitted(created);
         setNewClaimRef(ref);
         setProcessing(false);
+        setStepDir('forward');
         setSubmitStep('done');
       }, 2000);
     });
@@ -148,8 +155,12 @@ export const ClaimsView: React.FC<ClaimsViewProps> = ({
           <button
             type="button"
             onClick={() => {
-              if (submitStep === 'review') setSubmitStep('details');
-              else onSetStartSubmitOpen(false);
+              if (submitStep === 'review') {
+                setStepDir('back');
+                setSubmitStep('details');
+              } else {
+                onSetStartSubmitOpen(false);
+              }
             }}
             className="min-h-[44px] inline-flex items-center gap-2 text-sm font-medium text-[#5C6066] hover:text-[#A32035] mb-3"
           >
@@ -164,40 +175,39 @@ export const ClaimsView: React.FC<ClaimsViewProps> = ({
             {submitStep === 'done' ? 'Claim Submitted (Demo)' : 'Submit a Takaful Claim'}
           </h1>
 
-          <PqTabSwap swapKey={submitStep}>
+          <PqTabSwap swapKey={submitStep} direction={stepDir}>
           {submitStep === 'details' && (
             <div className="mt-5 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-[#1E2022] mb-1">
                   Select Certificate
                 </label>
-                <select
+                <PqSelect
+                  ariaLabel="Select Certificate"
                   value={selectedCertId}
-                  onChange={(e) => setSelectedCertId(e.target.value)}
-                  className="w-full min-h-[44px] px-3 rounded-xl border border-[#E5E7EB] text-xs bg-white"
-                >
-                  {activeCerts.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.productName} ({c.certificateNumber})
-                    </option>
-                  ))}
-                </select>
+                  onChange={setSelectedCertId}
+                  options={activeCerts.map((c) => ({
+                    value: c.id,
+                    label: `${c.productName} (${c.certificateNumber})`,
+                  }))}
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-[#1E2022] mb-1">
                   Claim Category
                 </label>
-                <select
+                <PqSelect
+                  ariaLabel="Claim Category"
                   value={claimType}
-                  onChange={(e) => setClaimType(e.target.value)}
-                  className="w-full min-h-[44px] px-3 rounded-xl border border-[#E5E7EB] text-xs bg-white"
-                >
-                  <option>Hospitalization / Medical Reimbursement</option>
-                  <option>Motor Own-Damage / Repair</option>
-                  <option>Accidental Injury Benefit</option>
-                  <option>Maturity / Partial Benefit Claim</option>
-                </select>
+                  onChange={setClaimType}
+                  options={[
+                    { value: 'Hospitalization / Medical Reimbursement', label: 'Hospitalization / Medical Reimbursement' },
+                    { value: 'Critical Illness / Surgical Care', label: 'Critical Illness / Surgical Care' },
+                    { value: 'Accidental Injury Benefit', label: 'Accidental Injury Benefit' },
+                    { value: 'Maturity / Partial Benefit Claim', label: 'Maturity / Partial Benefit Claim' },
+                  ]}
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -234,7 +244,7 @@ export const ClaimsView: React.FC<ClaimsViewProps> = ({
                   rows={3}
                   value={summary}
                   onChange={(e) => setSummary(e.target.value)}
-                  placeholder="Describe what happened, hospital or workshop name..."
+                  placeholder="Describe hospitalization, medical care, or claim details..."
                   className="w-full p-3 rounded-xl border border-[#E5E7EB] text-xs focus:outline-none focus:border-[#A32035]"
                 />
               </div>
@@ -246,8 +256,8 @@ export const ClaimsView: React.FC<ClaimsViewProps> = ({
                 <div className="space-y-2">
                   {[
                     'CNIC Copy (Verified Profile).pdf',
-                    'Medical Discharge Summary / Repair Invoice.pdf',
-                    'Itemized Receipts & Supporting Photos.zip',
+                    'Hospital Discharge Summary & Itemized Bills.pdf',
+                    'Lab Reports & Supporting Records.zip',
                   ].map((doc) => {
                     const checked = attachedDocs.includes(doc);
                     return (
@@ -277,7 +287,10 @@ export const ClaimsView: React.FC<ClaimsViewProps> = ({
               <button
                 type="button"
                 disabled={attachedDocs.length === 0}
-                onClick={() => setSubmitStep('review')}
+                onClick={() => {
+                  setStepDir('forward');
+                  setSubmitStep('review');
+                }}
                 className="w-full min-h-[48px] rounded-xl bg-[#A32035] hover:opacity-90 disabled:opacity-50 text-white text-sm font-medium"
               >
                 Review Claim Submission
@@ -380,7 +393,7 @@ export const ClaimsView: React.FC<ClaimsViewProps> = ({
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by Claim Reference (e.g., CLM-PQG-2026-1042) or product..."
+          placeholder="Search by Claim Reference (e.g., CLM-PQF-2026-1042) or product..."
           className="w-full min-h-[46px] pl-10 pr-4 rounded-xl border border-[#E5E7EB] bg-white text-xs text-[#1E2022] focus:outline-none focus:border-[#A32035]"
         />
       </div>
@@ -401,8 +414,7 @@ export const ClaimsView: React.FC<ClaimsViewProps> = ({
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <div className="text-xs font-semibold text-[#A32035]">
-                          {claim.entity === 'family' ? 'Family Takaful · PQFTL' : 'General Takaful · PQGTL'} ·{' '}
-                          {claim.referenceNumber}
+                          Family Takaful · PQFTL · {claim.referenceNumber}
                         </div>
                         <h2 className="text-base font-bold text-[#1E2022] mt-0.5">{claim.claimType}</h2>
                         <div className="text-xs text-[#5C6066] mt-0.5">

@@ -28,7 +28,14 @@ import {
   PQFS_VERIFIED_CONTACT,
   SHARIAH_MODULES,
 } from '../data/pqfsData';
-import { PQ_EASE, PqTabSwap } from './MotionPrimitives';
+import {
+  PQ_EASE,
+  PqSelect,
+  PqStaggerGroup,
+  PqStaggerItem,
+  PqTabSwap,
+  useScreenTransition,
+} from './MotionPrimitives';
 
 interface MoreViewProps {
   isAuthenticated: boolean;
@@ -61,6 +68,7 @@ export const MoreShariahSupportView: React.FC<MoreViewProps> = ({
   onReplaySplash,
   onLogoutOrLogin,
 }) => {
+  const { direction } = useScreenTransition();
   const [selectedShariahId, setSelectedShariahId] = useState(SHARIAH_MODULES[0].id);
   const [agentQuery, setAgentQuery] = useState('PQF-AGT-1042');
   const [agentResult, setAgentResult] = useState<(typeof DEMO_AGENTS)[0] | null>(DEMO_AGENTS[0]);
@@ -244,16 +252,17 @@ export const MoreShariahSupportView: React.FC<MoreViewProps> = ({
             className="rounded-2xl border border-[#E5E7EB] bg-white p-5 space-y-3"
           >
             <h2 className="text-base font-bold text-[#1E2022]">Submit a Complaint / Grievance</h2>
-            <select
+            <PqSelect
+              ariaLabel="Complaint Category"
               value={compCategory}
-              onChange={(e) => setCompCategory(e.target.value)}
-              className="w-full min-h-[42px] px-3 rounded-xl border border-[#E5E7EB] text-xs bg-white"
-            >
-              <option>Contribution / Allocation Query</option>
-              <option>Claims Processing Delay</option>
-              <option>Statement & Certificate Issuance</option>
-              <option>General Service Feedback</option>
-            </select>
+              onChange={setCompCategory}
+              options={[
+                { value: 'Contribution / Allocation Query', label: 'Contribution / Allocation Query' },
+                { value: 'Claims Processing Delay', label: 'Claims Processing Delay' },
+                { value: 'Statement & Certificate Issuance', label: 'Statement & Certificate Issuance' },
+                { value: 'General Service Feedback', label: 'General Service Feedback' },
+              ]}
+            />
             <input
               type="text"
               value={compSubject}
@@ -309,7 +318,7 @@ export const MoreShariahSupportView: React.FC<MoreViewProps> = ({
               <p className="text-xs text-[#5C6066]">
                 Verify consultant credentials by entering an illustrative code (try{' '}
                 <span className="font-semibold text-[#1E2022]">PQF-AGT-1042</span> or{' '}
-                <span className="font-semibold text-[#1E2022]">PQG-AGT-2088</span>).
+                <span className="font-semibold text-[#1E2022]">PQF-AGT-2088</span>).
               </p>
               <div className="flex gap-2">
                 <input
@@ -397,9 +406,9 @@ export const MoreShariahSupportView: React.FC<MoreViewProps> = ({
           </button>
 
           <div>
-            <h1 className="text-2xl font-bold text-[#1E2022]">PQFS Services Transparency Map</h1>
+            <h1 className="text-2xl font-bold text-[#1E2022]">PQFTL Services Transparency Map</h1>
             <p className="text-xs text-[#5C6066] mt-0.5">
-              Distinguishing existing PQFS digital portal services from proposed mobile application capabilities.
+              Distinguishing existing PQFTL digital portal services from proposed mobile application capabilities.
             </p>
           </div>
 
@@ -425,43 +434,49 @@ export const MoreShariahSupportView: React.FC<MoreViewProps> = ({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button
-            type="button"
-            onClick={() => onSubSectionChange('shariah')}
-            className="pq-card-interactive text-left p-5 rounded-2xl border border-[#E5E7EB] bg-white hover:border-[#007A48] transition-colors"
-          >
-            <Scale className="w-6 h-6 text-[#007A48]" />
-            <h2 className="mt-3 text-base font-bold text-[#1E2022]">Shariah Centre</h2>
-            <p className="mt-1 text-xs text-[#5C6066]">
-              Explore Waqf, Tabarru, Wakalah, and Shariah governance principles.
-            </p>
-          </button>
+        <PqStaggerGroup className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <PqStaggerItem>
+            <button
+              type="button"
+              onClick={() => onSubSectionChange('shariah')}
+              className="pq-card-interactive w-full h-full text-left p-5 rounded-2xl border border-[#E5E7EB] bg-white hover:border-[#007A48] transition-colors"
+            >
+              <Scale className="w-6 h-6 text-[#007A48]" />
+              <h2 className="mt-3 text-base font-bold text-[#1E2022]">Shariah Centre</h2>
+              <p className="mt-1 text-xs text-[#5C6066]">
+                Explore Waqf, Tabarru, Wakalah, and Shariah governance principles.
+              </p>
+            </button>
+          </PqStaggerItem>
 
-          <button
-            type="button"
-            onClick={() => onSubSectionChange('support')}
-            className="pq-card-interactive text-left p-5 rounded-2xl border border-[#E5E7EB] bg-white hover:border-[#A32035] transition-colors"
-          >
-            <Headphones className="w-6 h-6 text-[#A32035]" />
-            <h2 className="mt-3 text-base font-bold text-[#1E2022]">Customer Support</h2>
-            <p className="mt-1 text-xs text-[#5C6066]">
-              Helpline, WhatsApp self-service, complaints, branches, and agent lookup.
-            </p>
-          </button>
+          <PqStaggerItem>
+            <button
+              type="button"
+              onClick={() => onSubSectionChange('support')}
+              className="pq-card-interactive w-full h-full text-left p-5 rounded-2xl border border-[#E5E7EB] bg-white hover:border-[#A32035] transition-colors"
+            >
+              <Headphones className="w-6 h-6 text-[#A32035]" />
+              <h2 className="mt-3 text-base font-bold text-[#1E2022]">Customer Support</h2>
+              <p className="mt-1 text-xs text-[#5C6066]">
+                Helpline, WhatsApp self-service, complaints, branches, and agent lookup.
+              </p>
+            </button>
+          </PqStaggerItem>
 
-          <button
-            type="button"
-            onClick={() => onSubSectionChange('services')}
-            className="pq-card-interactive text-left p-5 rounded-2xl border border-[#E5E7EB] bg-white hover:border-[#A32035] transition-colors"
-          >
-            <Building className="w-6 h-6 text-[#F5B335]" />
-            <h2 className="mt-3 text-base font-bold text-[#1E2022]">PQFS Services Map</h2>
-            <p className="mt-1 text-xs text-[#5C6066]">
-              Compare existing PQFS portal services with proposed mobile capabilities.
-            </p>
-          </button>
-        </div>
+          <PqStaggerItem>
+            <button
+              type="button"
+              onClick={() => onSubSectionChange('services')}
+              className="pq-card-interactive w-full h-full text-left p-5 rounded-2xl border border-[#E5E7EB] bg-white hover:border-[#A32035] transition-colors"
+            >
+              <Building className="w-6 h-6 text-[#F5B335]" />
+              <h2 className="mt-3 text-base font-bold text-[#1E2022]">PQFTL Services Map</h2>
+              <p className="mt-1 text-xs text-[#5C6066]">
+                Compare existing PQFTL portal services with proposed mobile capabilities.
+              </p>
+            </button>
+          </PqStaggerItem>
+        </PqStaggerGroup>
 
       {/* Security & Preferences */}
       <section className="rounded-2xl border border-[#E5E7EB] bg-white divide-y divide-[#E5E7EB]">
@@ -518,24 +533,34 @@ export const MoreShariahSupportView: React.FC<MoreViewProps> = ({
             </div>
           </div>
           <div className="inline-flex p-0.5 rounded-lg bg-[#F4F4F5] border border-[#E5E7EB]">
-            <button
-              type="button"
-              onClick={() => onLanguageChange('en')}
-              className={`min-h-[34px] px-3 rounded-md text-xs font-medium ${
-                language === 'en' ? 'bg-white text-[#A32035] shadow-sm' : 'text-[#5C6066]'
-              }`}
-            >
-              English
-            </button>
-            <button
-              type="button"
-              onClick={() => onLanguageChange('ur')}
-              className={`min-h-[34px] px-3 rounded-md text-xs font-medium ${
-                language === 'ur' ? 'bg-white text-[#A32035] shadow-sm' : 'text-[#5C6066]'
-              }`}
-            >
-              اردو
-            </button>
+            {(
+              [
+                { code: 'en', label: 'English' },
+                { code: 'ur', label: 'اردو' },
+              ] as const
+            ).map((opt) => {
+              const active = language === opt.code;
+              return (
+                <button
+                  key={opt.code}
+                  type="button"
+                  onClick={() => onLanguageChange(opt.code)}
+                  className={`relative min-h-[34px] px-3 rounded-md text-xs font-medium transition-colors ${
+                    active ? 'text-[#A32035]' : 'text-[#5C6066]'
+                  }`}
+                >
+                  {active && (
+                    <motion.span
+                      layoutId="more-lang-pill"
+                      transition={{ duration: 0.22, ease: PQ_EASE }}
+                      className="absolute inset-0 rounded-md bg-white shadow-sm"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span className="relative z-10">{opt.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -544,7 +569,7 @@ export const MoreShariahSupportView: React.FC<MoreViewProps> = ({
             <RotateCcw className="w-4 h-4 text-[#5C6066]" />
             <div>
               <div className="text-sm font-semibold text-[#1E2022]">Islamic Ornamental Splash</div>
-              <div className="text-xs text-[#5C6066]">Replay initial PQFS launch experience</div>
+              <div className="text-xs text-[#5C6066]">Replay initial PQFTL launch experience</div>
             </div>
           </div>
           <button
@@ -583,5 +608,9 @@ export const MoreShariahSupportView: React.FC<MoreViewProps> = ({
     );
   };
 
-  return <PqTabSwap swapKey={subSection}>{renderSection()}</PqTabSwap>;
+  return (
+    <PqTabSwap swapKey={subSection} direction={direction}>
+      {renderSection()}
+    </PqTabSwap>
+  );
 };

@@ -10,9 +10,9 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { TAKAFUL_PRODUCTS } from '../data/pqfsData';
-import { TakafulEntity, TakafulProduct } from '../types/pqfs';
+import { FamilyProductCategory, TakafulProduct } from '../types/pqfs';
 import { ProductIcon } from './TakafulWheel';
-import { PQ_EASE } from './MotionPrimitives';
+import { PQ_EASE, PqSelect } from './MotionPrimitives';
 
 interface ContributionCalculatorViewProps {
   calcProductId: string;
@@ -46,28 +46,29 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
   onSelectProduct,
   onStartApplication,
 }) => {
-  const [entityFilter, setEntityFilter] = useState<'all' | TakafulEntity>('all');
+  const [categoryFilter, setCategoryFilter] = useState<FamilyProductCategory>('all');
 
   const calcProduct =
     TAKAFUL_PRODUCTS.find((p) => p.id === calcProductId) ?? TAKAFUL_PRODUCTS[0];
-  const isFamily = calcProduct.entity === 'family';
+  const isInvestmentLinked = calcProduct.isInvestmentLinked;
 
   const filteredProducts = useMemo(() => {
-    if (entityFilter === 'all') return TAKAFUL_PRODUCTS;
-    return TAKAFUL_PRODUCTS.filter((p) => p.entity === entityFilter);
-  }, [entityFilter]);
+    if (categoryFilter === 'all') return TAKAFUL_PRODUCTS;
+    return TAKAFUL_PRODUCTS.filter((p) => p.category === categoryFilter);
+  }, [categoryFilter]);
 
-  const handleEntityFilterChange = (nextFilter: 'all' | TakafulEntity) => {
-    setEntityFilter(nextFilter);
-    if (nextFilter !== 'all' && calcProduct.entity !== nextFilter) {
-      const firstMatch = TAKAFUL_PRODUCTS.find((p) => p.entity === nextFilter);
+  const handleCategoryFilterChange = (nextFilter: FamilyProductCategory) => {
+    setCategoryFilter(nextFilter);
+    if (nextFilter !== 'all' && calcProduct.category !== nextFilter) {
+      const firstMatch = TAKAFUL_PRODUCTS.find((p) => p.category === nextFilter);
       if (firstMatch) onCalcProductIdChange(firstMatch.id);
     }
   };
 
-  // Exact preserved calculation formulas
-  const totalIllustrativeContribution =
-    calcProduct.entity === 'family' ? calcMonthlyPkr * 12 * calcYears : calcMonthlyPkr;
+  // Multi-year projection for unit-linked savings/retirement; annual schedule for health/group protection
+  const totalIllustrativeContribution = isInvestmentLinked
+    ? calcMonthlyPkr * 12 * calcYears
+    : calcMonthlyPkr;
   const illustrativeProjectionLow = Math.round(totalIllustrativeContribution * 1.18);
   const illustrativeProjectionMid = Math.round(totalIllustrativeContribution * 1.38);
 
@@ -83,7 +84,6 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
     Math.min(100, ((calcYears - TERM_MIN) / (TERM_MAX - TERM_MIN)) * 100)
   );
 
-  // Proportion bar percentages relative to Moderate scenario (1.38x)
   const paidBarPct =
     illustrativeProjectionMid > 0
       ? Math.round((totalIllustrativeContribution / illustrativeProjectionMid) * 100)
@@ -93,7 +93,6 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
       ? Math.round((illustrativeProjectionLow / illustrativeProjectionMid) * 100)
       : 100;
 
-  // Build trajectory points strictly anchored at exact endpoints (0 -> Paid / Low / Mid)
   const chartGeometry = useMemo(() => {
     const w = 360;
     const h = 148;
@@ -181,7 +180,7 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
         </button>
 
         <div className="text-xs font-medium text-[#5C6066] hidden sm:block">
-          Shariah-Conscious Planning · Illustrative Estimator
+          Shariah-Conscious Planning · PQFTL Illustrative Estimator
         </div>
       </div>
 
@@ -194,45 +193,45 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
             </div>
             <div>
               <div className="text-xs font-semibold text-[#007A48]">
-                Pak-Qatar Takaful Financial Planner
+                Pak-Qatar Family Takaful Planner
               </div>
               <h1 className="text-xl sm:text-2xl font-bold text-[#1E2022] tracking-tight mt-0.5">
                 Contribution Calculator
               </h1>
               <p className="text-xs sm:text-sm text-[#5C6066] mt-0.5">
-                Configure your plan, contribution level, and horizon to preview illustrative Takaful outcomes.
+                Configure your Family Takaful plan, contribution level, and horizon to preview illustrative outcomes.
               </p>
             </div>
           </div>
 
-          {/* Entity Filter Segmented Control */}
+          {/* PQFTL Category Segmented Control */}
           <div
-            className="inline-flex p-1 rounded-xl bg-white border border-[#E5E7EB] self-start sm:self-center shrink-0"
+            className="inline-flex p-1 rounded-xl bg-white border border-[#E5E7EB] self-start sm:self-center shrink-0 max-w-full overflow-x-auto no-scrollbar"
             role="tablist"
-            aria-label="Filter calculator plans by company"
+            aria-label="Filter calculator plans by Family Takaful category"
           >
             {(
               [
                 { key: 'all', label: 'All Plans', activeBg: 'bg-[#1E2022]', hoverText: 'hover:text-[#1E2022]' },
-                { key: 'family', label: 'Family · PQFTL', activeBg: 'bg-[#A32035]', hoverText: 'hover:text-[#A32035]' },
-                { key: 'general', label: 'General · PQGTL', activeBg: 'bg-[#007A48]', hoverText: 'hover:text-[#007A48]' },
+                { key: 'savings-retirement', label: 'Savings & Retirement', activeBg: 'bg-[#A32035]', hoverText: 'hover:text-[#A32035]' },
+                { key: 'health-group', label: 'Health & Group', activeBg: 'bg-[#007A48]', hoverText: 'hover:text-[#007A48]' },
               ] as const
             ).map((opt) => {
-              const active = entityFilter === opt.key;
+              const active = categoryFilter === opt.key;
               return (
                 <button
                   key={opt.key}
                   type="button"
                   role="tab"
                   aria-selected={active}
-                  onClick={() => handleEntityFilterChange(opt.key)}
-                  className={`relative min-h-[38px] px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                  onClick={() => handleCategoryFilterChange(opt.key)}
+                  className={`relative min-h-[38px] px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors shrink-0 ${
                     active ? 'text-white' : `text-[#5C6066] ${opt.hoverText}`
                   }`}
                 >
                   {active && (
                     <motion.span
-                      layoutId="calc-entity-pill"
+                      layoutId="calc-category-pill"
                       transition={{ duration: 0.24, ease: PQ_EASE }}
                       className={`absolute inset-0 rounded-lg ${opt.activeBg}`}
                       aria-hidden="true"
@@ -258,31 +257,26 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
                   htmlFor="calc-prod-tab"
                   className="text-xs font-bold text-[#1E2022] tracking-wide"
                 >
-                  01. Select Takaful Plan
+                  01. Select Family Takaful Plan
                 </label>
-                <span
-                  className={`text-[11px] font-semibold ${
-                    isFamily ? 'text-[#A32035]' : 'text-[#007A48]'
-                  }`}
-                >
-                  {isFamily ? 'PQFTL · Family Takaful' : 'PQGTL · General Takaful'}
+                <span className="text-[11px] font-semibold text-[#A32035]">
+                  PQFTL · Family Takaful
                 </span>
               </div>
 
-              <select
+              <PqSelect
                 id="calc-prod-tab"
+                ariaLabel="Select Family Takaful Plan"
                 value={calcProductId}
-                onChange={(e) => onCalcProductIdChange(e.target.value)}
-                className="w-full min-h-[46px] px-3.5 rounded-xl border border-[#E5E7EB] bg-[#F7F5F2] text-sm font-semibold text-[#1E2022] focus:outline-none focus:border-[#007A48] transition-colors"
-              >
-                {filteredProducts.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({p.entity === 'family' ? 'PQFTL' : 'PQGTL'})
-                  </option>
-                ))}
-              </select>
+                onChange={onCalcProductIdChange}
+                options={filteredProducts.map((p) => ({
+                  value: p.id,
+                  label: p.name,
+                  subLabel: p.isInvestmentLinked ? 'Unit-Linked PIA' : 'Mutual Waqf Protection',
+                }))}
+                buttonClassName="bg-[#F7F5F2] min-h-[46px] font-semibold"
+              />
 
-              {/* Selected Plan Summary Line */}
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
                   key={calcProduct.id}
@@ -292,13 +286,7 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
                   transition={{ duration: 0.2, ease: PQ_EASE }}
                   className="mt-3 p-3.5 rounded-2xl bg-[#F7F5F2] border border-[#E5E7EB]/80 flex items-start gap-3"
                 >
-                  <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-300 ${
-                      isFamily
-                        ? 'bg-[#A32035]/10 text-[#A32035]'
-                        : 'bg-[#007A48]/10 text-[#007A48]'
-                    }`}
-                  >
+                  <div className="w-9 h-9 rounded-xl bg-[#A32035]/10 text-[#A32035] flex items-center justify-center shrink-0 transition-colors duration-300">
                     <ProductIcon iconKey={calcProduct.iconKey} className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -318,7 +306,7 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
               <div className="flex items-center justify-between gap-3 mb-2.5">
                 <div>
                   <span className="text-xs font-bold text-[#1E2022]">
-                    02. {isFamily ? 'Monthly Contribution' : 'Annual Contribution'}
+                    02. {isInvestmentLinked ? 'Monthly Contribution' : 'Annual Contribution'}
                   </span>
                   <div className="text-[11px] text-[#5C6066]">
                     Schedule: {calcProduct.illustrativeFrequency}
@@ -339,11 +327,7 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
                     <div className="text-[10px] font-medium text-[#5C6066] leading-none">
                       Selected
                     </div>
-                    <div
-                      className={`text-base font-bold tabular-nums leading-tight mt-0.5 ${
-                        isFamily ? 'text-[#A32035]' : 'text-[#007A48]'
-                      }`}
-                    >
+                    <div className="text-base font-bold text-[#A32035] tabular-nums leading-tight mt-0.5">
                       PKR {calcMonthlyPkr.toLocaleString()}
                     </div>
                   </div>
@@ -359,29 +343,24 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
                 </div>
               </div>
 
-              {/* Custom Progress-Backed Slider */}
               <div className="relative pt-1 pb-2">
                 <div className="absolute left-0 right-0 top-[14px] h-2 rounded-full bg-[#E5E7EB] overflow-hidden pointer-events-none">
                   <div
-                    className={`h-full rounded-full transition-all duration-150 ${
-                      isFamily ? 'bg-[#A32035]' : 'bg-[#007A48]'
-                    }`}
+                    className="h-full rounded-full bg-[#A32035] transition-all duration-150"
                     style={{ width: `${amountPct}%` }}
                   />
                 </div>
                 <input
                   type="range"
                   aria-label={
-                    isFamily ? 'Monthly Contribution in PKR' : 'Annual Contribution in PKR'
+                    isInvestmentLinked ? 'Monthly Contribution in PKR' : 'Annual Contribution in PKR'
                   }
                   min={AMOUNT_MIN}
                   max={AMOUNT_MAX}
                   step={AMOUNT_STEP}
                   value={calcMonthlyPkr}
                   onChange={(e) => onCalcMonthlyPkrChange(Number(e.target.value))}
-                  className={`relative z-10 pq-range ${
-                    isFamily ? 'pq-range-burgundy' : 'pq-range-green'
-                  }`}
+                  className="relative z-10 pq-range pq-range-burgundy"
                 />
                 <div className="flex justify-between text-[11px] text-[#5C6066] tabular-nums mt-0.5">
                   <span>PKR 3,500</span>
@@ -390,7 +369,6 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
                 </div>
               </div>
 
-              {/* Quick Preset Amounts */}
               <div className="mt-2.5 flex flex-wrap gap-1.5">
                 {AMOUNT_PRESETS.map((preset) => {
                   const active = calcMonthlyPkr === preset;
@@ -401,9 +379,7 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
                       onClick={() => onCalcMonthlyPkrChange(preset)}
                       className={`min-h-[36px] px-2.5 rounded-lg text-xs font-semibold tabular-nums border transition-colors whitespace-nowrap ${
                         active
-                          ? isFamily
-                            ? 'bg-[#A32035] text-white border-[#A32035]'
-                            : 'bg-[#007A48] text-white border-[#007A48]'
+                          ? 'bg-[#A32035] text-white border-[#A32035]'
                           : 'bg-[#F7F5F2] text-[#1E2022] border-[#E5E7EB] hover:border-[#007A48]'
                       }`}
                     >
@@ -421,11 +397,11 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
               )}
             </div>
 
-            {/* Step 3: Illustrative Term (for Family Takaful) */}
+            {/* Step 3: Illustrative Term or Annual Health/Group Waqf Schedule */}
             <AnimatePresence mode="wait" initial={false}>
-              {isFamily ? (
+              {isInvestmentLinked ? (
                 <motion.div
-                  key="step3-family"
+                  key="step3-pia"
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
@@ -516,7 +492,7 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
                 </motion.div>
               ) : (
                 <motion.div
-                  key="step3-general"
+                  key="step3-waqf-protection"
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
@@ -525,10 +501,10 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
                 >
                   <div className="p-4 rounded-2xl bg-[#F7F5F2] border border-[#E5E7EB]">
                     <div className="text-xs font-bold text-[#1E2022]">
-                      03. Annual General Protection Cycle
+                      03. Annual Family Health &amp; Group Protection Cycle
                     </div>
                     <p className="mt-1 text-xs text-[#5C6066] leading-relaxed">
-                      General Takaful plans under PQGTL operate on an annual or per-trip mutual Waqf protection schedule ({calcProduct.illustrativeFrequency}) without multi-year unit accumulation.
+                      PQFTL Health and Corporate Group plans operate on an annual mutual Waqf protection schedule ({calcProduct.illustrativeFrequency}) focused on hospitalization and protection benefits rather than unit accumulation.
                     </p>
                   </div>
                 </motion.div>
@@ -539,7 +515,6 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
 
         {/* RIGHT COLUMN: Prominent Results, Charts & Actions */}
         <section className="lg:col-span-6 flex flex-col gap-4">
-          {/* Deep Green Primary Result Showcase Card */}
           <motion.div
             key={`${calcProduct.id}-${calcProduct.isInvestmentLinked}`}
             initial={{ opacity: 0.92, y: 4 }}
@@ -547,10 +522,8 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
             className="rounded-3xl bg-[#007A48] text-white p-5 sm:p-6 shadow-sm relative overflow-hidden"
           >
-            {/* Subtle top Yellow (#F5B335) highlight bar */}
             <div className="absolute top-0 inset-x-0 h-1 bg-[#F5B335]" aria-hidden="true" />
 
-            {/* Subtle Islamic geometric star pattern watermark */}
             <svg
               viewBox="0 0 180 180"
               className="absolute -right-8 -top-8 w-44 h-44 text-white/10 pointer-events-none"
@@ -579,13 +552,13 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
 
             <div className="relative z-10">
               <div className="text-xs font-medium text-white/85">
-                {isFamily ? 'PQFTL · Family Takaful' : 'PQGTL · General Takaful'} ·{' '}
-                {calcProduct.isInvestmentLinked
+                PQFTL · Family Takaful ·{' '}
+                {isInvestmentLinked
                   ? `${calcYears}-Year Projection`
                   : calcProduct.illustrativeFrequency}
               </div>
 
-              {calcProduct.isInvestmentLinked ? (
+              {isInvestmentLinked ? (
                 <>
                   <div className="mt-2.5 text-xs font-semibold text-[#F5B335]">
                     Illustrative Range (Non-Guaranteed)
@@ -615,7 +588,7 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
               ) : (
                 <>
                   <div className="mt-2.5 text-xs font-semibold text-[#F5B335]">
-                    Total Paid (Illustrative)
+                    Annual Waqf Contribution (Illustrative)
                   </div>
                   <div className="mt-1 text-2xl sm:text-[32px] font-bold text-white tabular-nums tracking-tight leading-tight">
                     PKR {totalIllustrativeContribution.toLocaleString()}
@@ -623,7 +596,7 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
                   <div className="mt-4 pt-4 border-t border-white/15 flex items-start gap-2.5 text-xs text-white/90 leading-relaxed">
                     <ShieldCheck className="w-4 h-4 text-[#F5B335] shrink-0 mt-0.5" />
                     <span>
-                      Pure Waqf risk protection without investment accumulation.
+                      Pure Family Health &amp; Group Waqf protection without investment unit accumulation.
                     </span>
                   </div>
                 </>
@@ -633,7 +606,7 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
 
           {/* Visual Analytics & Milestones Card */}
           <div className="rounded-3xl border border-[#007A48]/20 bg-[#EAF3EE] p-5 flex-1 flex flex-col justify-between space-y-4">
-            {calcProduct.isInvestmentLinked ? (
+            {isInvestmentLinked ? (
               <>
                 <div className="flex items-center justify-between gap-2">
                   <div>
@@ -647,179 +620,170 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
                   <TrendingUp className="w-4 h-4 text-[#007A48] shrink-0" />
                 </div>
 
-                    {/* Comparison Progress Bars */}
-                    <div className="space-y-2.5 bg-white rounded-2xl border border-[#E5E7EB] p-4">
-                      <div>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="font-semibold text-[#1E2022]">
-                            Total Paid (Illustrative)
-                          </span>
-                          <span className="font-bold text-[#A32035] tabular-nums">
-                            PKR {totalIllustrativeContribution.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="h-2.5 rounded-full bg-[#F7F5F2] overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${paidBarPct}%` }}
-                            transition={{ duration: 0.38, ease: PQ_EASE }}
-                            className="h-full rounded-full bg-[#A32035]"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="font-semibold text-[#1E2022]">
-                            Illustrative Low Projection
-                          </span>
-                          <span className="font-bold text-[#007A48] tabular-nums">
-                            PKR {illustrativeProjectionLow.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="h-2.5 rounded-full bg-[#F7F5F2] overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${lowBarPct}%` }}
-                            transition={{ duration: 0.42, ease: PQ_EASE }}
-                            className="h-full rounded-full bg-[#007A48]"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="font-semibold text-[#1E2022]">
-                            Illustrative Moderate Projection
-                          </span>
-                          <span className="font-bold text-[#1E2022] tabular-nums">
-                            PKR {illustrativeProjectionMid.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="h-2.5 rounded-full bg-[#F7F5F2] overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: '100%' }}
-                            transition={{ duration: 0.46, ease: PQ_EASE }}
-                            className="h-full rounded-full bg-[#F5B335]"
-                          />
-                        </div>
-                      </div>
+                <div className="space-y-2.5 bg-white rounded-2xl border border-[#E5E7EB] p-4">
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="font-semibold text-[#1E2022]">
+                        Total Paid (Illustrative)
+                      </span>
+                      <span className="font-bold text-[#A32035] tabular-nums">
+                        PKR {totalIllustrativeContribution.toLocaleString()}
+                      </span>
                     </div>
+                    <div className="h-2.5 rounded-full bg-[#F7F5F2] overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${paidBarPct}%` }}
+                        transition={{ duration: 0.38, ease: PQ_EASE }}
+                        className="h-full rounded-full bg-[#A32035]"
+                      />
+                    </div>
+                  </div>
 
-                    {/* Interactive SVG Term Growth Trajectory */}
-                    <div className="bg-white rounded-2xl border border-[#E5E7EB] p-3.5">
-                      <div className="flex items-center justify-between text-[11px] text-[#5C6066] mb-1.5">
-                        <span className="font-semibold text-[#1E2022]">
-                          {calcYears}-Year Cumulative Trajectory
-                        </span>
-                        <span className="tabular-nums">
-                          Year 1 → Year {calcYears}
-                        </span>
-                      </div>
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="font-semibold text-[#1E2022]">
+                        Illustrative Low Projection
+                      </span>
+                      <span className="font-bold text-[#007A48] tabular-nums">
+                        PKR {illustrativeProjectionLow.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="h-2.5 rounded-full bg-[#F7F5F2] overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${lowBarPct}%` }}
+                        transition={{ duration: 0.42, ease: PQ_EASE }}
+                        className="h-full rounded-full bg-[#007A48]"
+                      />
+                    </div>
+                  </div>
 
-                      <svg
-                        viewBox={`0 0 ${chartGeometry.w} ${chartGeometry.h}`}
-                        className="w-full h-36 overflow-visible"
-                        role="img"
-                        aria-label="Illustrative projection curve across selected policy term"
-                      >
-                        <defs>
-                          <linearGradient id="pqCalcMidGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#F5B335" stopOpacity="0.28" />
-                            <stop offset="100%" stopColor="#F5B335" stopOpacity="0.02" />
-                          </linearGradient>
-                          <linearGradient id="pqCalcLowGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#007A48" stopOpacity="0.22" />
-                            <stop offset="100%" stopColor="#007A48" stopOpacity="0.02" />
-                          </linearGradient>
-                        </defs>
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="font-semibold text-[#1E2022]">
+                        Illustrative Moderate Projection
+                      </span>
+                      <span className="font-bold text-[#1E2022] tabular-nums">
+                        PKR {illustrativeProjectionMid.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="h-2.5 rounded-full bg-[#F7F5F2] overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: '100%' }}
+                        transition={{ duration: 0.46, ease: PQ_EASE }}
+                        className="h-full rounded-full bg-[#F5B335]"
+                      />
+                    </div>
+                  </div>
+                </div>
 
-                        {/* Horizontal subtle guide lines */}
-                        {[0.25, 0.5, 0.75, 1].map((frac) => {
-                          const y = chartGeometry.padT + chartGeometry.plotH * (1 - frac);
-                          return (
-                            <line
-                              key={frac}
-                              x1={chartGeometry.padL}
-                              y1={y}
-                              x2={chartGeometry.w - chartGeometry.padR}
-                              y2={y}
-                              stroke="#E5E7EB"
-                              strokeDasharray="3 3"
-                              strokeWidth="1"
-                            />
-                          );
-                        })}
+                <div className="bg-white rounded-2xl border border-[#E5E7EB] p-3.5">
+                  <div className="flex items-center justify-between text-[11px] text-[#5C6066] mb-1.5">
+                    <span className="font-semibold text-[#1E2022]">
+                      {calcYears}-Year Cumulative Trajectory
+                    </span>
+                    <span className="tabular-nums">
+                      Year 1 → Year {calcYears}
+                    </span>
+                  </div>
 
-                        {/* Area fills */}
-                        <path d={chartGeometry.midAreaPath} fill="url(#pqCalcMidGrad)" />
-                        <path d={chartGeometry.lowAreaPath} fill="url(#pqCalcLowGrad)" />
+                  <svg
+                    viewBox={`0 0 ${chartGeometry.w} ${chartGeometry.h}`}
+                    className="w-full h-36 overflow-visible"
+                    role="img"
+                    aria-label="Illustrative projection curve across selected policy term"
+                  >
+                    <defs>
+                      <linearGradient id="pqCalcMidGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#F5B335" stopOpacity="0.28" />
+                        <stop offset="100%" stopColor="#F5B335" stopOpacity="0.02" />
+                      </linearGradient>
+                      <linearGradient id="pqCalcLowGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#007A48" stopOpacity="0.22" />
+                        <stop offset="100%" stopColor="#007A48" stopOpacity="0.02" />
+                      </linearGradient>
+                    </defs>
 
-                        {/* Paid contributions baseline */}
-                        <motion.polyline
-                          key={`paid-${calcProduct.id}-${calcYears}`}
-                          initial={{ pathLength: 0, opacity: 0.4 }}
-                          animate={{ pathLength: 1, opacity: 1 }}
-                          transition={{ duration: 0.45, ease: PQ_EASE }}
-                          points={chartGeometry.paidLine}
-                          fill="none"
-                          stroke="#A32035"
-                          strokeWidth="2"
-                          strokeDasharray="4 3"
+                    {[0.25, 0.5, 0.75, 1].map((frac) => {
+                      const y = chartGeometry.padT + chartGeometry.plotH * (1 - frac);
+                      return (
+                        <line
+                          key={frac}
+                          x1={chartGeometry.padL}
+                          y1={y}
+                          x2={chartGeometry.w - chartGeometry.padR}
+                          y2={y}
+                          stroke="#E5E7EB"
+                          strokeDasharray="3 3"
+                          strokeWidth="1"
                         />
-                        {/* Conservative curve */}
-                        <motion.polyline
-                          key={`low-${calcProduct.id}-${calcYears}`}
-                          initial={{ pathLength: 0, opacity: 0.4 }}
-                          animate={{ pathLength: 1, opacity: 1 }}
-                          transition={{ duration: 0.52, ease: PQ_EASE }}
-                          points={chartGeometry.lowLine}
-                          fill="none"
-                          stroke="#007A48"
-                          strokeWidth="2.4"
-                          strokeLinecap="round"
-                        />
-                        {/* Moderate curve */}
-                        <motion.polyline
-                          key={`mid-${calcProduct.id}-${calcYears}`}
-                          initial={{ pathLength: 0, opacity: 0.4 }}
-                          animate={{ pathLength: 1, opacity: 1 }}
-                          transition={{ duration: 0.58, ease: PQ_EASE }}
-                          points={chartGeometry.midLine}
-                          fill="none"
-                          stroke="#F5B335"
-                          strokeWidth="2.6"
-                          strokeLinecap="round"
-                        />
+                      );
+                    })}
 
-                        {/* Endpoint markers */}
-                        <circle
-                          cx={chartGeometry.endPaid.x}
-                          cy={chartGeometry.endPaid.y}
-                          r="3.5"
-                          fill="#A32035"
-                          stroke="#FFFFFF"
-                          strokeWidth="1.5"
-                        />
-                        <circle
-                          cx={chartGeometry.endLow.x}
-                          cy={chartGeometry.endLow.y}
-                          r="4"
-                          fill="#007A48"
-                          stroke="#FFFFFF"
-                          strokeWidth="1.5"
-                        />
-                        <circle
-                          cx={chartGeometry.endMid.x}
-                          cy={chartGeometry.endMid.y}
-                          r="4"
-                          fill="#F5B335"
-                          stroke="#FFFFFF"
-                          strokeWidth="1.5"
-                        />
+                    <path d={chartGeometry.midAreaPath} fill="url(#pqCalcMidGrad)" />
+                    <path d={chartGeometry.lowAreaPath} fill="url(#pqCalcLowGrad)" />
 
-                    {/* X-axis horizon labels */}
+                    <motion.polyline
+                      key={`paid-${calcProduct.id}-${calcYears}`}
+                      initial={{ pathLength: 0, opacity: 0.4 }}
+                      animate={{ pathLength: 1, opacity: 1 }}
+                      transition={{ duration: 0.45, ease: PQ_EASE }}
+                      points={chartGeometry.paidLine}
+                      fill="none"
+                      stroke="#A32035"
+                      strokeWidth="2"
+                      strokeDasharray="4 3"
+                    />
+                    <motion.polyline
+                      key={`low-${calcProduct.id}-${calcYears}`}
+                      initial={{ pathLength: 0, opacity: 0.4 }}
+                      animate={{ pathLength: 1, opacity: 1 }}
+                      transition={{ duration: 0.52, ease: PQ_EASE }}
+                      points={chartGeometry.lowLine}
+                      fill="none"
+                      stroke="#007A48"
+                      strokeWidth="2.4"
+                      strokeLinecap="round"
+                    />
+                    <motion.polyline
+                      key={`mid-${calcProduct.id}-${calcYears}`}
+                      initial={{ pathLength: 0, opacity: 0.4 }}
+                      animate={{ pathLength: 1, opacity: 1 }}
+                      transition={{ duration: 0.58, ease: PQ_EASE }}
+                      points={chartGeometry.midLine}
+                      fill="none"
+                      stroke="#F5B335"
+                      strokeWidth="2.6"
+                      strokeLinecap="round"
+                    />
+
+                    <circle
+                      cx={chartGeometry.endPaid.x}
+                      cy={chartGeometry.endPaid.y}
+                      r="3.5"
+                      fill="#A32035"
+                      stroke="#FFFFFF"
+                      strokeWidth="1.5"
+                    />
+                    <circle
+                      cx={chartGeometry.endLow.x}
+                      cy={chartGeometry.endLow.y}
+                      r="4"
+                      fill="#007A48"
+                      stroke="#FFFFFF"
+                      strokeWidth="1.5"
+                    />
+                    <circle
+                      cx={chartGeometry.endMid.x}
+                      cy={chartGeometry.endMid.y}
+                      r="4"
+                      fill="#F5B335"
+                      stroke="#FFFFFF"
+                      strokeWidth="1.5"
+                    />
+
                     <text
                       x={chartGeometry.padL}
                       y={chartGeometry.h - 4}
@@ -866,7 +830,6 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
                 </div>
               </>
             ) : (
-              /* Waqf Pure Risk Protection Visual Summary */
               <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4 space-y-3.5">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-bold text-[#1E2022]">
@@ -876,9 +839,7 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div className="p-3 rounded-xl bg-[#F7F5F2]">
-                    <div className="text-[11px] text-[#5C6066]">
-                      {isFamily ? 'Monthly Rate' : 'Annual Rate'}
-                    </div>
+                    <div className="text-[11px] text-[#5C6066]">Annual Rate</div>
                     <div className="font-bold text-[#1E2022] tabular-nums mt-0.5">
                       PKR {calcMonthlyPkr.toLocaleString()}
                     </div>
@@ -900,16 +861,11 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
               Demonstration figures do not represent guaranteed returns or official underwriting offers.
             </p>
 
-            {/* Primary & Secondary Actions */}
             <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
               <button
                 type="button"
                 onClick={() => onSelectProduct(calcProduct)}
-                className={`flex-1 min-h-[48px] px-4 rounded-full border bg-white text-sm font-semibold transition-colors whitespace-nowrap ${
-                  isFamily
-                    ? 'border-[#A32035] text-[#A32035] hover:bg-[#A32035]/5'
-                    : 'border-[#007A48] text-[#007A48] hover:bg-[#007A48]/5'
-                }`}
+                className="flex-1 min-h-[48px] px-4 rounded-full border border-[#A32035] text-[#A32035] hover:bg-[#A32035]/5 bg-white text-sm font-semibold transition-colors whitespace-nowrap"
               >
                 View Plan Details
               </button>
