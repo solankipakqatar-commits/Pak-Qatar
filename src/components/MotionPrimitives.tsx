@@ -11,6 +11,9 @@ import { Check, ChevronDown } from 'lucide-react';
 
 export const PQ_EASE = [0.16, 1, 0.3, 1] as const;
 export const PQ_SWEEP_EASE = [0.22, 1, 0.36, 1] as const;
+export const PQ_CATEGORY_EXIT_S = 0.11;
+export const PQ_CATEGORY_ENTER_S = 0.21;
+export const PQ_CATEGORY_EXIT_EASE = [0.4, 0, 1, 1] as const;
 
 export type TransitionDirection = 'forward' | 'back';
 
@@ -397,17 +400,120 @@ export const PqTabSwap: React.FC<PqTabSwapProps> = ({
   children,
 }) => {
   const prefersReduced = useReducedMotion();
-  const offset = direction === 'forward' ? 12 : -12;
+  const offset = direction === 'forward' ? 10 : -10;
 
   return (
-    <AnimatePresence mode="wait" initial={false}>
+    <AnimatePresence mode="wait" custom={offset} initial={false}>
       <motion.div
         key={swapKey}
-        initial={prefersReduced ? { opacity: 0 } : { opacity: 0, x: offset, y: 4, scale: 0.992 }}
-        animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
-        exit={prefersReduced ? { opacity: 0 } : { opacity: 0, x: -offset * 0.7, y: -3, scale: 0.994 }}
-        transition={{ duration: prefersReduced ? 0.14 : 0.24, ease: PQ_EASE }}
+        custom={offset}
+        variants={{
+          enter: (dx: number) =>
+            prefersReduced
+              ? { opacity: 0 }
+              : { opacity: 0, x: dx, y: 5, scale: 0.985 },
+          center: {
+            opacity: 1,
+            x: 0,
+            y: 0,
+            scale: 1,
+            transition: {
+              duration: prefersReduced ? 0.12 : PQ_CATEGORY_ENTER_S,
+              ease: PQ_EASE,
+            },
+          },
+          exit: (dx: number) =>
+            prefersReduced
+              ? { opacity: 0, transition: { duration: 0.08 } }
+              : {
+                  opacity: 0,
+                  x: -dx * 0.65,
+                  y: -3,
+                  scale: 0.99,
+                  transition: {
+                    duration: PQ_CATEGORY_EXIT_S,
+                    ease: PQ_CATEGORY_EXIT_EASE,
+                  },
+                },
+        }}
+        initial="enter"
+        animate="center"
+        exit="exit"
         className={className}
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
+interface PqCategoryRevealProps {
+  swapKey: string;
+  direction?: TransitionDirection | number;
+  className?: string;
+  children: React.ReactNode;
+}
+
+/**
+ * Smooth ~320ms unfolding reveal (110ms outgoing fold + 210ms incoming unfold)
+ * for category switching across Family Takaful plans, comparison matrices, calculators, and sections.
+ */
+export const PqCategoryReveal: React.FC<PqCategoryRevealProps> = ({
+  swapKey,
+  direction = 1,
+  className = '',
+  children,
+}) => {
+  const prefersReduced = useReducedMotion();
+  const dirSign =
+    typeof direction === 'number' ? (direction >= 0 ? 1 : -1) : direction === 'forward' ? 1 : -1;
+
+  return (
+    <AnimatePresence mode="wait" custom={dirSign} initial={false}>
+      <motion.div
+        key={swapKey}
+        custom={dirSign}
+        variants={{
+          enter: (dir: number) =>
+            prefersReduced
+              ? { opacity: 0 }
+              : {
+                  opacity: 0,
+                  scale: 0.972,
+                  y: 7,
+                  x: dir * 8,
+                  clipPath: 'inset(2.5% 1.2% 4.5% 1.2% round 24px)',
+                },
+          center: {
+            opacity: 1,
+            scale: 1,
+            y: 0,
+            x: 0,
+            clipPath: 'inset(-12px -12px -16px -12px round 24px)',
+            transition: {
+              duration: prefersReduced ? 0.12 : PQ_CATEGORY_ENTER_S,
+              ease: PQ_EASE,
+            },
+          },
+          exit: (dir: number) =>
+            prefersReduced
+              ? { opacity: 0, transition: { duration: 0.08 } }
+              : {
+                  opacity: 0,
+                  scale: 0.98,
+                  y: -4,
+                  x: -dir * 6,
+                  clipPath: 'inset(1.5% 0.8% 3.5% 0.8% round 24px)',
+                  transition: {
+                    duration: PQ_CATEGORY_EXIT_S,
+                    ease: PQ_CATEGORY_EXIT_EASE,
+                  },
+                },
+        }}
+        initial="enter"
+        animate="center"
+        exit="exit"
+        className={`will-change-transform ${className}`}
       >
         {children}
       </motion.div>

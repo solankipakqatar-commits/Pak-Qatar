@@ -261,8 +261,13 @@ function AppContent() {
           setScreen('app');
           break;
         case 'calculator':
-          setGuestSection('calculator');
-          setActiveTab('home');
+          if (!isAuthenticated) {
+            setGuestSection('calculator');
+            setActiveTab('home');
+          } else {
+            setProtectionSubTab('explore');
+            setActiveTab('protection');
+          }
           setScreen('app');
           break;
         case 'shariah':

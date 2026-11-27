@@ -23,13 +23,19 @@ import { TakafulWheel } from './TakafulWheel';
 import { ensureLoadingAssetsReady, PakQatarLogo, ProcessingOverlay } from './BrandAssets';
 import {
   PQ_EASE,
+  PqCategoryReveal,
   PqModal,
   PqSelect,
   PqStaggerGroup,
   PqStaggerItem,
-  PqTabSwap,
   useScreenTransition,
 } from './MotionPrimitives';
+
+const CERT_CATEGORY_ORDER: Record<FamilyProductCategory, number> = {
+  all: 0,
+  'savings-retirement': 1,
+  'health-group': 2,
+};
 
 interface ProtectionAndInvestmentsProps {
   isAuthenticated: boolean;
@@ -65,8 +71,16 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
   const { direction } = useScreenTransition();
   const [certStatusFilter, setCertStatusFilter] = useState<'Active' | 'Expired'>('Active');
   const [certCategoryFilter, setCertCategoryFilter] = useState<FamilyProductCategory>('all');
+  const [certCategoryDir, setCertCategoryDir] = useState<number>(1);
   const [statementCert, setStatementCert] = useState<TakafulCertificate | null>(null);
   const [activeFundId, setActiveFundId] = useState<string>(funds[0]?.id ?? 'fund-balanced');
+
+  const handleCertCategoryChange = (nextCat: FamilyProductCategory) => {
+    setCertCategoryDir(
+      CERT_CATEGORY_ORDER[nextCat] >= CERT_CATEGORY_ORDER[certCategoryFilter] ? 1 : -1
+    );
+    setCertCategoryFilter(nextCat);
+  };
 
   // Investment Servicing Action Modals (Top-Up, Withdrawal, Fund Switch)
   const [invAction, setInvAction] = useState<'topup' | 'withdrawal' | 'switch' | null>(null);
@@ -215,10 +229,10 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
         </div>
       </div>
 
-      <PqTabSwap swapKey={subTab} direction={direction}>
+      <PqCategoryReveal swapKey={subTab} direction={direction}>
         {/* Sub-tab 1: 360° Wheel & Product Catalogue */}
         {subTab === 'explore' && (
-          <div className="rounded-3xl border border-[#007A48]/20 bg-[#EAF3EE] p-5 sm:p-7">
+          <div className="rounded-3xl border border-[#007A48]/20 bg-[#EAF3EE] p-4 sm:p-7">
             <TakafulWheel
               category={wheelCategory}
               onCategoryChange={onWheelCategoryChange}
@@ -288,7 +302,7 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
                       <button
                         key={opt.key}
                         type="button"
-                        onClick={() => setCertCategoryFilter(opt.key)}
+                        onClick={() => handleCertCategoryChange(opt.key)}
                         className={`relative min-h-[38px] px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors shrink-0 ${
                           active ? 'text-[#A32035]' : 'text-[#5C6066]'
                         }`}
@@ -308,7 +322,10 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
                 </div>
               </div>
 
-              <PqTabSwap swapKey={`${certStatusFilter}-${certCategoryFilter}`}>
+              <PqCategoryReveal
+                swapKey={`${certStatusFilter}-${certCategoryFilter}`}
+                direction={certCategoryDir}
+              >
                 {filteredCerts.length === 0 ? (
                   <div className="rounded-2xl border border-[#E5E7EB] bg-white p-8 text-center text-sm text-[#5C6066]">
                     No {certStatusFilter.toLowerCase()} certificates found for the selected category filter.
@@ -381,7 +398,7 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
                     ))}
                   </PqStaggerGroup>
                 )}
-              </PqTabSwap>
+              </PqCategoryReveal>
             </div>
           )}
         </>
@@ -538,7 +555,7 @@ export const ProtectionAndInvestmentsView: React.FC<ProtectionAndInvestmentsProp
           )}
         </>
       )}
-      </PqTabSwap>
+      </PqCategoryReveal>
 
       {/* Certificate Detail Modal */}
       <PqModal

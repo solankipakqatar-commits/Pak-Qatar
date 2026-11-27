@@ -12,7 +12,13 @@ import { AnimatePresence, motion } from 'motion/react';
 import { TAKAFUL_PRODUCTS } from '../data/pqfsData';
 import { FamilyProductCategory, TakafulProduct } from '../types/pqfs';
 import { ProductIcon } from './TakafulWheel';
-import { PQ_EASE, PqSelect } from './MotionPrimitives';
+import { PQ_EASE, PqCategoryReveal, PqSelect } from './MotionPrimitives';
+
+const CALC_CATEGORY_ORDER: Record<FamilyProductCategory, number> = {
+  all: 0,
+  'savings-retirement': 1,
+  'health-group': 2,
+};
 
 interface ContributionCalculatorViewProps {
   calcProductId: string;
@@ -47,6 +53,7 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
   onStartApplication,
 }) => {
   const [categoryFilter, setCategoryFilter] = useState<FamilyProductCategory>('all');
+  const [categoryDirection, setCategoryDirection] = useState<number>(1);
 
   const calcProduct =
     TAKAFUL_PRODUCTS.find((p) => p.id === calcProductId) ?? TAKAFUL_PRODUCTS[0];
@@ -58,6 +65,9 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
   }, [categoryFilter]);
 
   const handleCategoryFilterChange = (nextFilter: FamilyProductCategory) => {
+    setCategoryDirection(
+      CALC_CATEGORY_ORDER[nextFilter] >= CALC_CATEGORY_ORDER[categoryFilter] ? 1 : -1
+    );
     setCategoryFilter(nextFilter);
     if (nextFilter !== 'all' && calcProduct.category !== nextFilter) {
       const firstMatch = TAKAFUL_PRODUCTS.find((p) => p.category === nextFilter);
@@ -277,15 +287,11 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
                 buttonClassName="bg-[#F7F5F2] min-h-[46px] font-semibold"
               />
 
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={calcProduct.id}
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.2, ease: PQ_EASE }}
-                  className="mt-3 p-3.5 rounded-2xl bg-[#F7F5F2] border border-[#E5E7EB]/80 flex items-start gap-3"
-                >
+              <PqCategoryReveal
+                swapKey={`${categoryFilter}-${calcProduct.id}`}
+                direction={categoryDirection}
+              >
+                <div className="mt-3 p-3.5 rounded-2xl bg-[#F7F5F2] border border-[#E5E7EB]/80 flex items-start gap-3">
                   <div className="w-9 h-9 rounded-xl bg-[#A32035]/10 text-[#A32035] flex items-center justify-center shrink-0 transition-colors duration-300">
                     <ProductIcon iconKey={calcProduct.iconKey} className="w-4 h-4" />
                   </div>
@@ -297,8 +303,8 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
                       {calcProduct.mainBenefit}
                     </p>
                   </div>
-                </motion.div>
-              </AnimatePresence>
+                </div>
+              </PqCategoryReveal>
             </div>
 
             {/* Step 2: Contribution Amount */}
@@ -515,94 +521,93 @@ export const ContributionCalculatorView: React.FC<ContributionCalculatorViewProp
 
         {/* RIGHT COLUMN: Prominent Results, Charts & Actions */}
         <section className="lg:col-span-6 flex flex-col gap-4">
-          <motion.div
-            key={`${calcProduct.id}-${calcProduct.isInvestmentLinked}`}
-            initial={{ opacity: 0.92, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            className="rounded-3xl bg-[#007A48] text-white p-5 sm:p-6 shadow-sm relative overflow-hidden"
+          <PqCategoryReveal
+            swapKey={`${categoryFilter}-${calcProduct.id}-${calcProduct.isInvestmentLinked}`}
+            direction={categoryDirection}
           >
-            <div className="absolute top-0 inset-x-0 h-1 bg-[#F5B335]" aria-hidden="true" />
+            <div className="rounded-3xl bg-[#007A48] text-white p-5 sm:p-6 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 inset-x-0 h-1 bg-[#F5B335]" aria-hidden="true" />
 
-            <svg
-              viewBox="0 0 180 180"
-              className="absolute -right-8 -top-8 w-44 h-44 text-white/10 pointer-events-none"
-              fill="none"
-              aria-hidden="true"
-            >
-              <circle cx="90" cy="90" r="76" stroke="currentColor" strokeWidth="1" />
-              <rect
-                x="36"
-                y="36"
-                width="108"
-                height="108"
-                stroke="currentColor"
-                strokeWidth="1"
-              />
-              <rect
-                x="36"
-                y="36"
-                width="108"
-                height="108"
-                transform="rotate(45 90 90)"
-                stroke="currentColor"
-                strokeWidth="1"
-              />
-            </svg>
+              <svg
+                viewBox="0 0 180 180"
+                className="absolute -right-8 -top-8 w-44 h-44 text-white/10 pointer-events-none"
+                fill="none"
+                aria-hidden="true"
+              >
+                <circle cx="90" cy="90" r="76" stroke="currentColor" strokeWidth="1" />
+                <rect
+                  x="36"
+                  y="36"
+                  width="108"
+                  height="108"
+                  stroke="currentColor"
+                  strokeWidth="1"
+                />
+                <rect
+                  x="36"
+                  y="36"
+                  width="108"
+                  height="108"
+                  transform="rotate(45 90 90)"
+                  stroke="currentColor"
+                  strokeWidth="1"
+                />
+              </svg>
 
-            <div className="relative z-10">
-              <div className="text-xs font-medium text-white/85">
-                PQFTL · Family Takaful ·{' '}
-                {isInvestmentLinked
-                  ? `${calcYears}-Year Projection`
-                  : calcProduct.illustrativeFrequency}
+              <div className="relative z-10">
+                <div className="text-xs font-medium text-white/85">
+                  PQFTL · Family Takaful ·{' '}
+                  {isInvestmentLinked
+                    ? `${calcYears}-Year Projection`
+                    : calcProduct.illustrativeFrequency}
+                </div>
+
+                {isInvestmentLinked ? (
+                  <>
+                    <div className="mt-2.5 text-xs font-semibold text-[#F5B335]">
+                      Illustrative Range (Non-Guaranteed)
+                    </div>
+                    <div className="mt-1 text-2xl sm:text-[30px] font-bold text-white tabular-nums tracking-tight leading-tight">
+                      PKR {illustrativeProjectionLow.toLocaleString()} –{' '}
+                      {illustrativeProjectionMid.toLocaleString()}
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-white/15 grid grid-cols-2 gap-3">
+                      <div>
+                        <div className="text-[11px] text-white/80">Total Paid (Illustrative)</div>
+                        <div className="text-base sm:text-lg font-bold text-white tabular-nums mt-0.5">
+                          PKR {totalIllustrativeContribution.toLocaleString()}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] text-white/80">
+                          Illustrative Growth Band
+                        </div>
+                        <div className="text-base sm:text-lg font-bold text-[#F5B335] tabular-nums mt-0.5">
+                          +{lowSurplus.toLocaleString()} to +{midSurplus.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="mt-2.5 text-xs font-semibold text-[#F5B335]">
+                      Annual Waqf Contribution (Illustrative)
+                    </div>
+                    <div className="mt-1 text-2xl sm:text-[32px] font-bold text-white tabular-nums tracking-tight leading-tight">
+                      PKR {totalIllustrativeContribution.toLocaleString()}
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-white/15 flex items-start gap-2.5 text-xs text-white/90 leading-relaxed">
+                      <ShieldCheck className="w-4 h-4 text-[#F5B335] shrink-0 mt-0.5" />
+                      <span>
+                        Pure Family Health &amp; Group Waqf protection without investment unit accumulation.
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
-
-              {isInvestmentLinked ? (
-                <>
-                  <div className="mt-2.5 text-xs font-semibold text-[#F5B335]">
-                    Illustrative Range (Non-Guaranteed)
-                  </div>
-                  <div className="mt-1 text-2xl sm:text-[30px] font-bold text-white tabular-nums tracking-tight leading-tight">
-                    PKR {illustrativeProjectionLow.toLocaleString()} –{' '}
-                    {illustrativeProjectionMid.toLocaleString()}
-                  </div>
-
-                  <div className="mt-4 pt-4 border-t border-white/15 grid grid-cols-2 gap-3">
-                    <div>
-                      <div className="text-[11px] text-white/80">Total Paid (Illustrative)</div>
-                      <div className="text-base sm:text-lg font-bold text-white tabular-nums mt-0.5">
-                        PKR {totalIllustrativeContribution.toLocaleString()}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[11px] text-white/80">
-                        Illustrative Growth Band
-                      </div>
-                      <div className="text-base sm:text-lg font-bold text-[#F5B335] tabular-nums mt-0.5">
-                        +{lowSurplus.toLocaleString()} to +{midSurplus.toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="mt-2.5 text-xs font-semibold text-[#F5B335]">
-                    Annual Waqf Contribution (Illustrative)
-                  </div>
-                  <div className="mt-1 text-2xl sm:text-[32px] font-bold text-white tabular-nums tracking-tight leading-tight">
-                    PKR {totalIllustrativeContribution.toLocaleString()}
-                  </div>
-                  <div className="mt-4 pt-4 border-t border-white/15 flex items-start gap-2.5 text-xs text-white/90 leading-relaxed">
-                    <ShieldCheck className="w-4 h-4 text-[#F5B335] shrink-0 mt-0.5" />
-                    <span>
-                      Pure Family Health &amp; Group Waqf protection without investment unit accumulation.
-                    </span>
-                  </div>
-                </>
-              )}
             </div>
-          </motion.div>
+          </PqCategoryReveal>
 
           {/* Visual Analytics & Milestones Card */}
           <div className="rounded-3xl border border-[#007A48]/20 bg-[#EAF3EE] p-5 flex-1 flex flex-col justify-between space-y-4">

@@ -20,7 +20,7 @@ import {
   ShieldCheck,
   UserCheck,
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import {
   DEMO_AGENTS,
   DEMO_BRANCHES,
@@ -33,10 +33,17 @@ import { ProductIcon, TakafulWheel } from './TakafulWheel';
 import {
   PQ_EASE,
   PqAccordionPanel,
+  PqCategoryReveal,
   PqSelect,
   PqTabSwap,
   TransitionDirection,
 } from './MotionPrimitives';
+
+const GUEST_CATEGORY_ORDER: Record<FamilyProductCategory, number> = {
+  all: 0,
+  'savings-retirement': 1,
+  'health-group': 2,
+};
 
 /* ============================================================================
  * 1. Dedicated Destination: Family Takaful Products (360° Product Dial)
@@ -61,6 +68,7 @@ export const GuestProductsScreen: React.FC<GuestProductsScreenProps> = ({
   onSelectProduct,
   onStartApplication,
 }) => {
+  const prefersReduced = useReducedMotion();
   const activeCategoryDefault =
     wheelCategory === 'all'
       ? TAKAFUL_PRODUCTS[0]
@@ -89,7 +97,12 @@ export const GuestProductsScreen: React.FC<GuestProductsScreenProps> = ({
       </div>
 
       {/* Original Centered 360° Product Dial Showcase */}
-      <section className="rounded-3xl border border-[#007A48]/20 bg-[#EAF3EE] p-5 sm:p-7">
+      <motion.section
+        initial={prefersReduced ? false : { opacity: 0, scale: 0.975, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: prefersReduced ? 0.12 : 0.32, ease: PQ_EASE }}
+        className="rounded-3xl border border-[#007A48]/20 bg-[#EAF3EE] p-4 sm:p-7 will-change-transform"
+      >
         <div className="mb-5">
           <div className="text-xs font-semibold text-[#007A48]">
             Pak-Qatar Family Takaful Limited (PQFTL)
@@ -98,7 +111,7 @@ export const GuestProductsScreen: React.FC<GuestProductsScreenProps> = ({
             Family Takaful Products &amp; 360° Selector
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-[#5C6066] leading-relaxed max-w-2xl">
-            Rotate the dial or switch to list view to explore Shariah-compliant savings, child education, retirement, Elaaj health, and corporate group solutions.
+            Rotate or swipe the dial, filter by category, and tap any highlighted PQFTL plan to explore Shariah-compliant savings, child education, retirement, Elaaj health, and corporate group solutions.
           </p>
         </div>
 
@@ -107,7 +120,7 @@ export const GuestProductsScreen: React.FC<GuestProductsScreenProps> = ({
           onCategoryChange={onWheelCategoryChange}
           onSelectProduct={onSelectProduct}
         />
-      </section>
+      </motion.section>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <button
@@ -159,12 +172,16 @@ export const GuestCompareScreen: React.FC<GuestCompareScreenProps> = ({
     'ft-child-education',
   ]);
 
+  const [compareDirection, setCompareDirection] = useState<number>(1);
   const categoryProducts = useMemo(() => {
     if (compareCategory === 'all') return TAKAFUL_PRODUCTS;
     return TAKAFUL_PRODUCTS.filter((p) => p.category === compareCategory);
   }, [compareCategory]);
 
   const handleCategorySwitch = (nextCat: FamilyProductCategory) => {
+    setCompareDirection(
+      GUEST_CATEGORY_ORDER[nextCat] >= GUEST_CATEGORY_ORDER[compareCategory] ? 1 : -1
+    );
     setCompareCategory(nextCat);
     const list =
       nextCat === 'all'
@@ -305,7 +322,10 @@ export const GuestCompareScreen: React.FC<GuestCompareScreenProps> = ({
       </section>
 
       {/* Side-by-Side Structured Comparison Matrix */}
-      <PqTabSwap swapKey={`${compareA.id}-${compareB.id}`}>
+      <PqCategoryReveal
+        swapKey={`${compareCategory}-${compareA.id}-${compareB.id}`}
+        direction={compareDirection}
+      >
         <section className="rounded-3xl border border-[#E5E7EB] bg-white overflow-hidden">
           {/* Column Headers */}
           <div className="grid grid-cols-1 sm:grid-cols-2 border-b border-[#E5E7EB]">
@@ -466,7 +486,7 @@ export const GuestCompareScreen: React.FC<GuestCompareScreenProps> = ({
             </div>
           </div>
         </section>
-      </PqTabSwap>
+      </PqCategoryReveal>
 
       {/* Shariah Context Footer Card */}
       <section className="rounded-3xl border border-[#007A48]/20 bg-[#EAF3EE] p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1057,6 +1077,14 @@ export const GuestApplicationWizard: React.FC<GuestApplicationWizardProps> = ({
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [stepDir, setStepDir] = useState<TransitionDirection>('forward');
   const [categoryFilter, setCategoryFilter] = useState<FamilyProductCategory>('all');
+  const [categoryDirection, setCategoryDirection] = useState<number>(1);
+
+  const handleWizardCategoryChange = (nextCat: FamilyProductCategory) => {
+    setCategoryDirection(
+      GUEST_CATEGORY_ORDER[nextCat] >= GUEST_CATEGORY_ORDER[categoryFilter] ? 1 : -1
+    );
+    setCategoryFilter(nextCat);
+  };
 
   const [selectedPlanId, setSelectedPlanId] = useState<string>(startingProduct.id);
   const selectedPlan =
@@ -1276,59 +1304,70 @@ export const GuestApplicationWizard: React.FC<GuestApplicationWizardProps> = ({
                         { key: 'savings-retirement', label: 'Savings' },
                         { key: 'health-group', label: 'Health & Group' },
                       ] as const
-                    ).map((c) => (
-                      <button
-                        key={c.key}
-                        type="button"
-                        onClick={() => setCategoryFilter(c.key)}
-                        className={`min-h-[34px] px-3 rounded-lg text-xs font-semibold transition-colors ${
-                          categoryFilter === c.key
-                            ? 'bg-white text-[#A32035] shadow-xs'
-                            : 'text-[#5C6066]'
-                        }`}
-                      >
-                        {c.label}
-                      </button>
-                    ))}
+                    ).map((c) => {
+                      const active = categoryFilter === c.key;
+                      return (
+                        <button
+                          key={c.key}
+                          type="button"
+                          onClick={() => handleWizardCategoryChange(c.key)}
+                          className={`relative min-h-[34px] px-3 rounded-lg text-xs font-semibold transition-colors ${
+                            active ? 'text-[#A32035]' : 'text-[#5C6066] hover:text-[#1E2022]'
+                          }`}
+                        >
+                          {active && (
+                            <motion.span
+                              layoutId="wizard-category-pill"
+                              transition={{ duration: 0.22, ease: PQ_EASE }}
+                              className="absolute inset-0 rounded-lg bg-white shadow-xs"
+                              aria-hidden="true"
+                            />
+                          )}
+                          <span className="relative z-10">{c.label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {filteredPlans.map((plan) => {
-                    const active = plan.id === selectedPlan.id;
-                    return (
-                      <button
-                        key={plan.id}
-                        type="button"
-                        onClick={() => handleChoosePlan(plan)}
-                        className={`pq-card-interactive p-4 rounded-2xl border text-left transition-colors flex items-start gap-3 ${
-                          active
-                            ? 'border-[#A32035] bg-[#EAF3EE]/60'
-                            : 'border-[#E5E7EB] bg-white hover:border-[#A32035]'
-                        }`}
-                      >
-                        <div
-                          className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                            active ? 'bg-[#A32035] text-white' : 'bg-[#F4F4F5] text-[#007A48]'
+                <PqCategoryReveal swapKey={categoryFilter} direction={categoryDirection}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {filteredPlans.map((plan) => {
+                      const active = plan.id === selectedPlan.id;
+                      return (
+                        <button
+                          key={plan.id}
+                          type="button"
+                          onClick={() => handleChoosePlan(plan)}
+                          className={`pq-card-interactive p-4 rounded-2xl border text-left transition-colors flex items-start gap-3 ${
+                            active
+                              ? 'border-[#A32035] bg-[#EAF3EE]/60'
+                              : 'border-[#E5E7EB] bg-white hover:border-[#A32035]'
                           }`}
                         >
-                          <ProductIcon iconKey={plan.iconKey} className="w-5 h-5" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-bold text-[#1E2022] leading-snug">
-                            {plan.name}
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                              active ? 'bg-[#A32035] text-white' : 'bg-[#F4F4F5] text-[#007A48]'
+                            }`}
+                          >
+                            <ProductIcon iconKey={plan.iconKey} className="w-5 h-5" />
                           </div>
-                          <div className="text-[11px] text-[#5C6066] mt-0.5 line-clamp-2">
-                            {plan.shortTagline}
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold text-[#1E2022] leading-snug">
+                              {plan.name}
+                            </div>
+                            <div className="text-[11px] text-[#5C6066] mt-0.5 line-clamp-2">
+                              {plan.shortTagline}
+                            </div>
+                            <div className="mt-2 text-[11px] font-bold text-[#007A48] tabular-nums">
+                              From PKR {plan.illustrativeMinContributionPkr.toLocaleString()}
+                            </div>
                           </div>
-                          <div className="mt-2 text-[11px] font-bold text-[#007A48] tabular-nums">
-                            From PKR {plan.illustrativeMinContributionPkr.toLocaleString()}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </PqCategoryReveal>
 
                 <div className="pt-2 flex flex-col sm:flex-row gap-3">
                   <button

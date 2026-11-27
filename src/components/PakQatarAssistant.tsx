@@ -4,6 +4,7 @@ import {
   AlertCircle,
   ArrowRight,
   Lock,
+  Mail,
   Mic,
   MicOff,
   PhoneCall,
@@ -47,12 +48,14 @@ interface ChatMessage {
   text: string;
   timestamp: string;
   mode?: 'live-ai' | 'privacy-guard' | 'fallback-reference' | 'error';
+  isStreaming?: boolean;
   suggestedAction?: AssistantNavigationAction;
   sources?: string[];
   knowledgeBaseUpdatedAt?: string;
   authenticatedAccess?: boolean;
   knowledgeMatches?: KnowledgeMatch[];
   retryPrompt?: string;
+  pairedUserMsgId?: string;
 }
 
 interface PakQatarAssistantProps {
@@ -90,7 +93,7 @@ type SpeechRecognitionConstructor = new () => SpeechRecognitionInstance;
 
 const SUGGESTED_QUESTIONS_EN = [
   'Explore Family Takaful Plans',
-  'Explore Elaaj Health & Education Plans',
+  'Eligibility & Required Documents',
   'How does Takaful work?',
   'How can I make a payment?',
   'How do I submit a claim?',
@@ -99,7 +102,7 @@ const SUGGESTED_QUESTIONS_EN = [
 
 const SUGGESTED_QUESTIONS_UR = [
   'فیملی تکافل پلانز دیکھیں',
-  'علاج ہیلتھ اور تعلیمی پلانز دیکھیں',
+  'اہلیت اور ضروری دستاویزات',
   'تکافل کیسے کام کرتا ہے؟',
   'میں ادائیگی کیسے کر سکتا ہوں؟',
   'کلیم کیسے جمع کرواؤں؟',
@@ -131,7 +134,7 @@ const ACTION_LABELS_UR: Record<Exclude<AssistantNavigationAction, 'none'>, strin
 };
 
 /**
- * Geometric Islamic 8-Point Star & Conversation Mark (zero female avatars or depictions).
+ * Geometric Islamic 8-Point Star & Conversation Mark.
  */
 const AssistantEmblem: React.FC<{ size?: number }> = ({ size = 34 }) => (
   <svg
@@ -179,12 +182,12 @@ function getWelcomeMessage(lang: LanguageCode): ChatMessage {
     role: 'assistant',
     text:
       lang === 'ur'
-        ? 'السلام علیکم! میں پاک قطر اسسٹنٹ ہوں۔ میں پاک قطر فیملی تکافل (PQFTL) کے بچت، تعلیم، ریٹائرمنٹ/VPS، علاج ہیلتھ پلانز، شرعی اصولوں، ادائیگیوں اور کلیمز کے بارے میں مستند معلومات فراہم کرنے کے لیے حاضر ہوں۔'
-        : 'Assalam-o-Alaikum! I am the Pak-Qatar Assistant for Pak-Qatar Family Takaful (PQFTL). Ask me in English or Urdu about Family Savings, Child Education, Retirement & VPS, Elaaj Health plans, Shariah concepts, payments, certificates, or claim guidance.',
+        ? 'السلام علیکم! میں پاک قطر اسسٹنٹ ہوں۔ میں پاک قطر فیملی تکافل (PQFTL) کے بچت، تعلیم، ریٹائرمنٹ/VPS، علاج ہیلتھ پلانز، اہلیت اور ضروری دستاویزات، شرعی اصولوں، ادائیگیوں اور کلیمز کے بارے میں تفصیلی اور مستند معلومات فراہم کرنے کے لیے حاضر ہوں۔'
+        : 'Assalam-o-Alaikum! I am the Pak-Qatar Assistant for Pak-Qatar Family Takaful Limited (PQFTL). Ask me in English or Urdu about Family Savings, Child Education, Retirement & VPS, Elaaj Health plans, eligibility, required documents, Shariah principles, payments, or claims.',
     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     mode: 'live-ai',
     sources: ['Pak-Qatar Family Takaful Verified Knowledge Base'],
-    knowledgeBaseUpdatedAt: '26 Nov 2026',
+    knowledgeBaseUpdatedAt: '27 Nov 2026',
   };
 }
 
@@ -192,9 +195,79 @@ function isUrduString(text: string): boolean {
   return /[\u0600-\u06FF]/.test(text);
 }
 
+/**
+ * Safely renders inline **bold** segments without raw HTML injection.
+ */
+function renderInlineBold(line: string, keyPrefix: string): React.ReactNode {
+  const parts = line.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, idx) => {
+    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+      return (
+        <strong key={`${keyPrefix}-${idx}`} className="font-bold text-[#1E2022]">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return <React.Fragment key={`${keyPrefix}-${idx}`}>{part}</React.Fragment>;
+  });
+}
+
+function renderFormattedAssistantText(text: string): React.ReactNode {
+  const lines = text.split('\n');
+  return lines.map((rawLine, lineIdx) => {
+    const trimmed = rawLine.trim();
+    if (!trimmed) {
+      return <div key={`sp-${lineIdx}`} className="h-1.5" />;
+    }
+    const cleanHeading = trimmed.replace(/^#{1,4}\s+/, '');
+    const cleanBullet = cleanHeading.replace(/^[-*]\s+/, '• ');
+    return (
+      <p key={`ln-${lineIdx}`} className="leading-relaxed">
+        {renderInlineBold(cleanBullet, `ln-${lineIdx}`)}
+      </p>
+    );
+  });
+}
+
+/**
+ * Builds strict alternating user -> model pairs from confirmed live-ai turns only.
+ * Orphaned failed user turns are excluded so Gemini never receives consecutive user turns.
+ */
+function buildCleanApiHistory(
+  msgs: ChatMessage[],
+  stopBeforeMsgId?: string
+): Array<{ role: 'user' | 'model'; text: string }> {
+  const limitIdx = stopBeforeMsgId
+    ? msgs.findIndex((m) => m.id === stopBeforeMsgId)
+    : msgs.length;
+  const slice = limitIdx === -1 ? msgs : msgs.slice(0, limitIdx);
+
+  const pairs: Array<{ role: 'user' | 'model'; text: string }> = [];
+  for (let i = 0; i < slice.length; i++) {
+    const cur = slice[i];
+    if (cur.id === 'pqfs-welcome-msg' || cur.isStreaming) continue;
+    if (cur.role === 'user') {
+      const next = slice[i + 1];
+      if (
+        next &&
+        next.role === 'assistant' &&
+        next.mode === 'live-ai' &&
+        !next.isStreaming &&
+        next.text.trim()
+      ) {
+        pairs.push({ role: 'user', text: cur.text.trim() });
+        pairs.push({ role: 'model', text: next.text.trim() });
+        i++; // skip paired assistant reply
+      }
+    }
+  }
+  return pairs.slice(-8);
+}
+
 const ASSISTANT_POS_STORAGE_KEY = 'pqfs_assistant_pos_v1';
 const FLOAT_BTN_SIZE = 48;
 const FLOAT_EDGE_MARGIN = 12;
+const STREAM_TIMEOUT_MS = 45_000;
 
 interface StoredRatios {
   rx: number;
@@ -260,6 +333,24 @@ function pixelsToRatios(x: number, y: number, hasBottomNav: boolean): StoredRati
   };
 }
 
+interface SseFallbackPayload {
+  errorCode?: string;
+  statusCode?: number;
+  message?: string;
+  knowledgeBaseUpdatedAt?: string;
+  knowledgeMatches?: KnowledgeMatch[];
+  suggestedAction?: AssistantNavigationAction;
+}
+
+interface SseDonePayload {
+  reply?: string;
+  suggestedAction?: AssistantNavigationAction;
+  sources?: string[];
+  knowledgeBaseUpdatedAt?: string;
+  authenticatedAccess?: boolean;
+  mode?: 'live-ai' | 'privacy-guard';
+}
+
 export const PakQatarAssistant: React.FC<PakQatarAssistantProps> = ({
   visible,
   hasBottomNav,
@@ -277,6 +368,7 @@ export const PakQatarAssistant: React.FC<PakQatarAssistantProps> = ({
   const [messages, setMessages] = useState<ChatMessage[]>(() => [getWelcomeMessage(appLanguage)]);
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [hasFirstStreamChunk, setHasFirstStreamChunk] = useState(false);
 
   const [savedRatios, setSavedRatios] = useState<StoredRatios>(() => loadSavedRatios());
   const [pos, setPos] = useState<{ x: number; y: number }>(() =>
@@ -308,7 +400,7 @@ export const PakQatarAssistant: React.FC<PakQatarAssistantProps> = ({
   }>({
     checked: false,
     aiConfigured: true,
-    knowledgeBaseUpdatedAt: '26 Nov 2026',
+    knowledgeBaseUpdatedAt: '27 Nov 2026',
   });
 
   const [voiceSupported, setVoiceSupported] = useState(false);
@@ -317,6 +409,7 @@ export const PakQatarAssistant: React.FC<PakQatarAssistantProps> = ({
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const scrollEndRef = useRef<HTMLDivElement | null>(null);
+  const activeAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     setChatLang(appLanguage);
@@ -357,7 +450,7 @@ export const PakQatarAssistant: React.FC<PakQatarAssistantProps> = ({
             setAiStatus({
               checked: true,
               aiConfigured: Boolean(data.aiConfigured),
-              knowledgeBaseUpdatedAt: data.knowledgeBaseUpdatedAt || '26 Nov 2026',
+              knowledgeBaseUpdatedAt: data.knowledgeBaseUpdatedAt || '27 Nov 2026',
             });
           }
         }
@@ -382,6 +475,7 @@ export const PakQatarAssistant: React.FC<PakQatarAssistantProps> = ({
 
   useEffect(() => {
     return () => {
+      activeAbortRef.current?.abort();
       if (recognitionRef.current) {
         try {
           recognitionRef.current.stop();
@@ -394,34 +488,93 @@ export const PakQatarAssistant: React.FC<PakQatarAssistantProps> = ({
 
   if (!visible) return null;
 
-  const sendMessage = async (rawText: string) => {
+  const sendMessage = async (
+    rawText: string,
+    retryOpts?: { removeMsgId: string; existingUserMsgId?: string }
+  ) => {
     const trimmed = rawText.trim();
     if (!trimmed || isSending) return;
 
     setVoiceNotice(null);
     const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const userMsg: ChatMessage = {
-      id: `usr-${Date.now()}`,
-      role: 'user',
-      text: trimmed,
-      timestamp: nowTime,
-    };
+    const userMsgId = retryOpts?.existingUserMsgId || `usr-${Date.now()}`;
+    const streamMsgId = `ast-${Date.now() + 1}`;
 
-    const nextHistory = messages
-      .filter((m) => m.id !== 'pqfs-welcome-msg' && (m.mode === 'live-ai' || m.role === 'user'))
-      .slice(-8)
-      .map((m) => ({
-        role: m.role === 'user' ? ('user' as const) : ('model' as const),
-        text: m.text,
-      }));
+    const nextHistory = buildCleanApiHistory(messages, retryOpts?.existingUserMsgId);
 
-    setMessages((prev) => [...prev, userMsg]);
-    setInputValue('');
+    if (retryOpts) {
+      setMessages((prev) => prev.filter((m) => m.id !== retryOpts.removeMsgId));
+    } else {
+      const userMsg: ChatMessage = {
+        id: userMsgId,
+        role: 'user',
+        text: trimmed,
+        timestamp: nowTime,
+      };
+      setMessages((prev) => [...prev, userMsg]);
+      setInputValue('');
+    }
+
     setIsSending(true);
+    setHasFirstStreamChunk(false);
+
+    activeAbortRef.current?.abort();
+    const abortController = new AbortController();
+    activeAbortRef.current = abortController;
+    let didTimeout = false;
+    const timeoutTimer = window.setTimeout(() => {
+      didTimeout = true;
+      abortController.abort();
+    }, STREAM_TIMEOUT_MS);
+
+    let accumulatedText = '';
+    let insertedStreamBubble = false;
+    let receivedTerminalEvent = false;
+
+    const pushFallbackMessage = (fallback: SseFallbackPayload, isOffline = false) => {
+      receivedTerminalEvent = true;
+      const isNotConfigured =
+        fallback.errorCode === 'AI_NOT_CONFIGURED' || fallback.statusCode === 503;
+      if (isNotConfigured) {
+        setAiStatus((prev) => ({
+          ...prev,
+          checked: true,
+          aiConfigured: false,
+        }));
+      }
+
+      const fallbackMsg: ChatMessage = {
+        id: `err-${Date.now()}`,
+        role: 'assistant',
+        text:
+          fallback.message ||
+          (chatLang === 'ur'
+            ? 'اس وقت لائیو اے آئی سروس دستیاب نہیں ہے۔ ذیل میں تصدیق شدہ پاک قطر معلومات اور آفیشل ہیلپ لائن ملاحظہ کریں۔'
+            : 'Live AI service is currently unavailable. Please review verified Pak-Qatar excerpts or contact our official helpline below.'),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        mode: isNotConfigured || (fallback.knowledgeMatches?.length ?? 0) > 0
+          ? 'fallback-reference'
+          : 'error',
+        knowledgeMatches: fallback.knowledgeMatches,
+        knowledgeBaseUpdatedAt:
+          fallback.knowledgeBaseUpdatedAt || aiStatus.knowledgeBaseUpdatedAt,
+        suggestedAction: fallback.suggestedAction || (isOffline ? 'support' : 'none'),
+        retryPrompt: trimmed,
+        pairedUserMsgId: userMsgId,
+      };
+
+      setMessages((prev) => {
+        const cleaned = insertedStreamBubble
+          ? prev.filter((m) => m.id !== streamMsgId)
+          : prev;
+        return [...cleaned, fallbackMsg];
+      });
+    };
 
     try {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
+        Accept: 'text/event-stream, application/json',
       };
       if (isAuthenticated && authToken) {
         headers.Authorization = `Bearer ${authToken}`;
@@ -431,6 +584,7 @@ export const PakQatarAssistant: React.FC<PakQatarAssistantProps> = ({
         message: trimmed,
         language: isUrduString(trimmed) ? 'ur' : chatLang,
         history: nextHistory,
+        stream: true,
       };
 
       if (isAuthenticated && authToken) {
@@ -445,82 +599,216 @@ export const PakQatarAssistant: React.FC<PakQatarAssistantProps> = ({
         method: 'POST',
         headers,
         body: JSON.stringify(payload),
+        signal: abortController.signal,
       });
 
-      const data = (await res.json().catch(() => ({}))) as {
-        reply?: string;
-        suggestedAction?: AssistantNavigationAction;
-        sources?: string[];
-        knowledgeBaseUpdatedAt?: string;
-        authenticatedAccess?: boolean;
-        mode?: 'live-ai' | 'privacy-guard';
-        errorCode?: string;
-        message?: string;
-        knowledgeMatches?: KnowledgeMatch[];
-      };
+      const contentType = res.headers.get('content-type') || '';
 
       if (!res.ok) {
-        const isNotConfigured = res.status === 503 && data.errorCode === 'AI_NOT_CONFIGURED';
-        if (isNotConfigured) {
-          setAiStatus((prev) => ({
-            ...prev,
-            checked: true,
-            aiConfigured: false,
-          }));
-        }
-
-        const errMsg: ChatMessage = {
-          id: `err-${Date.now()}`,
-          role: 'assistant',
-          text:
-            data.message ||
-            (chatLang === 'ur'
-              ? 'اس وقت لائیو اے آئی سروس دستیاب نہیں ہے۔'
-              : 'Live AI service is currently unavailable.'),
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          mode: isNotConfigured ? 'fallback-reference' : 'error',
-          knowledgeMatches: data.knowledgeMatches,
-          knowledgeBaseUpdatedAt: data.knowledgeBaseUpdatedAt || aiStatus.knowledgeBaseUpdatedAt,
-          retryPrompt: trimmed,
-        };
-        setMessages((prev) => [...prev, errMsg]);
+        const errData = (await res.json().catch(() => ({}))) as SseFallbackPayload;
+        pushFallbackMessage(errData);
         return;
       }
 
+      // Handle SSE streaming response incrementally word-by-word
+      if (contentType.includes('text/event-stream') && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let sseBuffer = '';
+
+        const processSseBlock = (block: string) => {
+          const lines = block.split(/\r?\n/);
+          let eventName = 'message';
+          const dataLines: string[] = [];
+          for (const line of lines) {
+            if (line.startsWith('event:')) {
+              eventName = line.slice(6).trim();
+            } else if (line.startsWith('data:')) {
+              dataLines.push(line.slice(5).trimStart());
+            }
+          }
+          if (dataLines.length === 0) return;
+
+          const dataStr = dataLines.join('\n');
+          let parsed: unknown;
+          try {
+            parsed = JSON.parse(dataStr);
+          } catch {
+            return;
+          }
+
+          if (eventName === 'chunk') {
+            const delta = (parsed as { delta?: unknown }).delta;
+            if (typeof delta === 'string' && delta.length > 0) {
+              accumulatedText += delta;
+              if (!insertedStreamBubble) {
+                insertedStreamBubble = true;
+                setHasFirstStreamChunk(true);
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: streamMsgId,
+                    role: 'assistant',
+                    text: accumulatedText,
+                    timestamp: new Date().toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    }),
+                    mode: 'live-ai',
+                    isStreaming: true,
+                  },
+                ]);
+              } else {
+                const snapshotText = accumulatedText;
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === streamMsgId ? { ...m, text: snapshotText } : m
+                  )
+                );
+              }
+            }
+          } else if (eventName === 'done') {
+            receivedTerminalEvent = true;
+            const doneData = parsed as SseDonePayload;
+            setAiStatus((prev) => ({
+              ...prev,
+              checked: true,
+              aiConfigured: true,
+              knowledgeBaseUpdatedAt:
+                doneData.knowledgeBaseUpdatedAt || prev.knowledgeBaseUpdatedAt,
+            }));
+
+            const finalText =
+              typeof doneData.reply === 'string' && doneData.reply.trim()
+                ? doneData.reply.trim()
+                : accumulatedText.trim() ||
+                  'I could not generate a response for that query.';
+
+            const finalMsg: ChatMessage = {
+              id: streamMsgId,
+              role: 'assistant',
+              text: finalText,
+              timestamp: new Date().toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+              mode: doneData.mode || 'live-ai',
+              isStreaming: false,
+              suggestedAction: doneData.suggestedAction || 'none',
+              sources: doneData.sources,
+              knowledgeBaseUpdatedAt:
+                doneData.knowledgeBaseUpdatedAt || aiStatus.knowledgeBaseUpdatedAt,
+              authenticatedAccess: doneData.authenticatedAccess,
+            };
+
+            setMessages((prev) =>
+              insertedStreamBubble
+                ? prev.map((m) => (m.id === streamMsgId ? finalMsg : m))
+                : [...prev, finalMsg]
+            );
+          } else if (eventName === 'fallback') {
+            pushFallbackMessage(parsed as SseFallbackPayload);
+          }
+        };
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (value) {
+            sseBuffer += decoder.decode(value, { stream: true });
+            const blocks = sseBuffer.split(/\r?\n\r?\n/);
+            sseBuffer = blocks.pop() ?? '';
+            for (const block of blocks) {
+              if (block.trim()) processSseBlock(block);
+            }
+          }
+          if (done) {
+            sseBuffer += decoder.decode();
+            if (sseBuffer.trim()) {
+              processSseBlock(sseBuffer);
+            }
+            break;
+          }
+        }
+
+        if (!receivedTerminalEvent) {
+          if (accumulatedText.trim()) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === streamMsgId
+                  ? {
+                      ...m,
+                      text: accumulatedText.trim(),
+                      isStreaming: false,
+                      sources: ['Pak-Qatar Family Takaful Verified Knowledge Base'],
+                      knowledgeBaseUpdatedAt: aiStatus.knowledgeBaseUpdatedAt,
+                    }
+                  : m
+              )
+            );
+          } else {
+            pushFallbackMessage({
+              errorCode: 'STREAM_INCOMPLETE',
+              message:
+                chatLang === 'ur'
+                  ? 'جواب مکمل ہونے سے پہلے رابطہ منقطع ہو گیا۔ براہِ کرم دوبارہ کوشش کریں یا آفیشل ہیلپ لائن سے مدد لیں۔'
+                  : 'The live response ended unexpectedly. Please retry or contact our official UAN helpline below.',
+              suggestedAction: 'support',
+            });
+          }
+        }
+        return;
+      }
+
+      // Synchronous JSON fallback response handling
+      const data = (await res.json().catch(() => ({}))) as SseDonePayload;
       setAiStatus((prev) => ({
         ...prev,
         checked: true,
         aiConfigured: true,
-        knowledgeBaseUpdatedAt: data.knowledgeBaseUpdatedAt || prev.knowledgeBaseUpdatedAt,
+        knowledgeBaseUpdatedAt:
+          data.knowledgeBaseUpdatedAt || prev.knowledgeBaseUpdatedAt,
       }));
 
       const replyMsg: ChatMessage = {
-        id: `ast-${Date.now()}`,
+        id: streamMsgId,
         role: 'assistant',
         text: data.reply || 'I could not generate a response for that query.',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         mode: data.mode || 'live-ai',
         suggestedAction: data.suggestedAction || 'none',
         sources: data.sources,
-        knowledgeBaseUpdatedAt: data.knowledgeBaseUpdatedAt || aiStatus.knowledgeBaseUpdatedAt,
+        knowledgeBaseUpdatedAt:
+          data.knowledgeBaseUpdatedAt || aiStatus.knowledgeBaseUpdatedAt,
         authenticatedAccess: data.authenticatedAccess,
       };
       setMessages((prev) => [...prev, replyMsg]);
-    } catch {
-      const offlineMsg: ChatMessage = {
-        id: `net-${Date.now()}`,
-        role: 'assistant',
-        text:
-          chatLang === 'ur'
-            ? 'سرور سے رابطہ منقطع ہو گیا ہے۔ براہِ کرم اپنا انٹرنیٹ چیک کریں اور دوبارہ کوشش کریں۔'
-            : 'Unable to connect to the Pak-Qatar Assistant server. Please check your connection and retry.',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        mode: 'error',
-        retryPrompt: trimmed,
-      };
-      setMessages((prev) => [...prev, offlineMsg]);
+    } catch (err) {
+      const wasUserCleared =
+        err instanceof Error && err.name === 'AbortError' && !didTimeout;
+      if (wasUserCleared) {
+        return;
+      }
+      pushFallbackMessage(
+        {
+          errorCode: didTimeout ? 'AI_TIMEOUT' : 'NETWORK_ERROR',
+          message: didTimeout
+            ? chatLang === 'ur'
+              ? 'جواب موصول ہونے میں توقع سے زیادہ وقت لگا۔ براہِ کرم دوبارہ کوشش کریں یا آفیشل پاک قطر ہیلپ لائن پر رابطہ کریں۔'
+              : 'The assistant took too long to respond. Please retry or contact Pak-Qatar official support below.'
+            : chatLang === 'ur'
+              ? 'سرور سے رابطہ منقطع ہو گیا ہے۔ براہِ کرم اپنا انٹرنیٹ چیک کریں اور دوبارہ کوشش کریں۔'
+              : 'Unable to connect to the Pak-Qatar Assistant server. Please check your connection, retry, or reach our official UAN support below.',
+          suggestedAction: 'support',
+        },
+        true
+      );
     } finally {
+      window.clearTimeout(timeoutTimer);
+      if (activeAbortRef.current === abortController) {
+        activeAbortRef.current = null;
+      }
       setIsSending(false);
+      setHasFirstStreamChunk(false);
     }
   };
 
@@ -582,6 +870,10 @@ export const PakQatarAssistant: React.FC<PakQatarAssistantProps> = ({
   };
 
   const clearHistory = () => {
+    activeAbortRef.current?.abort();
+    activeAbortRef.current = null;
+    setIsSending(false);
+    setHasFirstStreamChunk(false);
     setMessages([getWelcomeMessage(chatLang)]);
     setVoiceNotice(null);
   };
@@ -690,7 +982,6 @@ export const PakQatarAssistant: React.FC<PakQatarAssistantProps> = ({
           onPointerUp={handleTriggerPointerUp}
           onPointerCancel={handleTriggerPointerCancel}
           onClick={(e) => {
-            // Support keyboard activation (Enter / Space) without double-firing pointer taps
             if (e.detail === 0) setOpen(true);
           }}
           aria-label="Open Pak-Qatar AI Assistant (drag to move)"
@@ -747,11 +1038,11 @@ export const PakQatarAssistant: React.FC<PakQatarAssistantProps> = ({
                     <div className="text-[11px] text-white/85 truncate">
                       {aiStatus.checked && !aiStatus.aiConfigured
                         ? chatLang === 'ur'
-                          ? 'ڈیمو ریفرنس موڈ · لائیو اے آئی دستیاب نہیں'
-                          : 'Prototype Mode · Live AI Offline'
+                          ? 'تصدیق شدہ پاک قطر گائیڈ موڈ'
+                          : 'Verified PQFTL Reference Mode'
                         : chatLang === 'ur'
-                          ? `لائیو اے آئی · اپڈیٹ ${aiStatus.knowledgeBaseUpdatedAt}`
-                          : `Live AI · Verified ${aiStatus.knowledgeBaseUpdatedAt}`}
+                          ? `پاک قطر فیملی تکافل · اپڈیٹ ${aiStatus.knowledgeBaseUpdatedAt}`
+                          : `PQFTL Verified Knowledge · ${aiStatus.knowledgeBaseUpdatedAt}`}
                     </div>
                   </div>
                 </div>
@@ -866,9 +1157,9 @@ export const PakQatarAssistant: React.FC<PakQatarAssistantProps> = ({
                             <AlertCircle className="w-4 h-4 text-[#A32035] shrink-0 mt-0.5" />
                             <div>
                               <div className="font-bold">
-                                {msg.mode === 'fallback-reference'
-                                  ? 'Prototype Reference Mode (Live AI Not Configured)'
-                                  : 'Connection Notice'}
+                                {chatLang === 'ur'
+                                  ? 'تصدیق شدہ پاک قطر معلومات اور معاونت'
+                                  : 'Verified PQFTL Excerpts & Support'}
                               </div>
                               <p className="text-[11px] text-[#5C6066] mt-0.5">{msg.text}</p>
                             </div>
@@ -876,89 +1167,133 @@ export const PakQatarAssistant: React.FC<PakQatarAssistantProps> = ({
                         )}
 
                         {!isFallbackOrError && (
-                          <div className="space-y-1.5 whitespace-pre-line">{msg.text}</div>
+                          <div className="space-y-1 text-[13px] text-[#1E2022]">
+                            {renderFormattedAssistantText(msg.text)}
+                            {msg.isStreaming && (
+                              <span
+                                aria-hidden="true"
+                                className="inline-block w-1.5 h-3.5 ml-1 align-middle bg-[#007A48] animate-pulse rounded-xs"
+                              />
+                            )}
+                          </div>
                         )}
 
-                        {/* Official Knowledge Base Fallback Cards when AI is offline/unconfigured */}
-                        {msg.knowledgeMatches && msg.knowledgeMatches.length > 0 && (
-                          <div className="space-y-2 pt-1">
-                            <div className="text-[11px] font-bold text-[#007A48]">
-                              Verified Pak-Qatar Knowledge Base References:
-                            </div>
-                            {msg.knowledgeMatches.map((km) => (
-                              <div
-                                key={km.id}
-                                className="p-2.5 rounded-xl bg-[#EAF3EE]/70 border border-[#007A48]/15 text-xs"
-                              >
-                                <div className="font-bold text-[#1E2022]">{km.title}</div>
-                                <p className="text-[11px] text-[#5C6066] mt-0.5 line-clamp-3">
-                                  {km.excerpt}
-                                </p>
-                                <div className="mt-1 text-[10px] text-[#007A48]">
-                                  Source: {km.sourceLabel} · Updated {km.lastUpdated}
+                        {/* Official Knowledge Base Excerpts & UAN Support when AI is unavailable */}
+                        {isFallbackOrError && (
+                          <div className="space-y-2 pt-0.5">
+                            {msg.knowledgeMatches && msg.knowledgeMatches.length > 0 && (
+                              <>
+                                <div className="text-[11px] font-bold text-[#007A48]">
+                                  {chatLang === 'ur'
+                                    ? 'تصدیق شدہ پاک قطر فیملی تکافل حوالہ جات:'
+                                    : 'Verified PQFTL Knowledge Excerpts:'}
                                 </div>
+                                {msg.knowledgeMatches.map((km) => (
+                                  <div
+                                    key={km.id}
+                                    className="p-2.5 rounded-xl bg-[#EAF3EE]/70 border border-[#007A48]/15 text-xs"
+                                  >
+                                    <div className="font-bold text-[#1E2022]">{km.title}</div>
+                                    <p className="text-[11px] text-[#5C6066] mt-1 leading-relaxed">
+                                      {km.excerpt}
+                                    </p>
+                                    <div className="mt-1 text-[10px] text-[#007A48]">
+                                      {km.sourceLabel} · Updated {km.lastUpdated}
+                                    </div>
+                                  </div>
+                                ))}
+                              </>
+                            )}
+
+                            {/* Always show official Pak-Qatar UAN & Email support card */}
+                            <div className="p-2.5 rounded-xl bg-[#F7F5F2] border border-[#E5E7EB] text-[11px] text-[#1E2022] space-y-1">
+                              <div className="font-bold text-[#A32035]">
+                                {chatLang === 'ur'
+                                  ? 'آفیشل پاک قطر ہیلپ لائن'
+                                  : 'Official Pak-Qatar Customer Support'}
                               </div>
-                            ))}
-                            <div className="text-[11px] text-[#5C6066] flex items-center gap-1.5 pt-1">
-                              <PhoneCall className="w-3.5 h-3.5 text-[#A32035] shrink-0" />
-                              <span>
-                                Official Support: {PQFS_VERIFIED_CONTACT.uan} ·{' '}
-                                {PQFS_VERIFIED_CONTACT.email}
-                              </span>
+                              <div className="flex items-center gap-1.5 text-[#1E2022]">
+                                <PhoneCall className="w-3.5 h-3.5 text-[#007A48] shrink-0" />
+                                <span className="font-semibold">
+                                  UAN: {PQFS_VERIFIED_CONTACT.uan}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-[#5C6066]">
+                                <Mail className="w-3.5 h-3.5 text-[#007A48] shrink-0" />
+                                <span>
+                                  {PQFS_VERIFIED_CONTACT.email} · {PQFS_VERIFIED_CONTACT.website}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         )}
 
                         {/* Action Button from Verified AI Navigation Hint */}
-                        {msg.suggestedAction && msg.suggestedAction !== 'none' && (
-                          <button
-                            type="button"
-                            onClick={() => handleActionClick(msg.suggestedAction!)}
-                            className="w-full min-h-[38px] px-3 py-1.5 rounded-xl bg-[#EAF3EE] hover:bg-[#007A48] text-[#007A48] hover:text-white text-xs font-semibold flex items-center justify-between transition-colors"
-                          >
-                            <span>
-                              {chatLang === 'ur'
-                                ? ACTION_LABELS_UR[msg.suggestedAction]
-                                : ACTION_LABELS_EN[msg.suggestedAction]}
-                            </span>
-                            <ArrowRight className="w-3.5 h-3.5 shrink-0" />
-                          </button>
-                        )}
+                        {!msg.isStreaming &&
+                          msg.suggestedAction &&
+                          msg.suggestedAction !== 'none' && (
+                            <button
+                              type="button"
+                              onClick={() => handleActionClick(msg.suggestedAction!)}
+                              className="w-full min-h-[38px] px-3 py-1.5 rounded-xl bg-[#EAF3EE] hover:bg-[#007A48] text-[#007A48] hover:text-white text-xs font-semibold flex items-center justify-between transition-colors"
+                            >
+                              <span>
+                                {chatLang === 'ur'
+                                  ? ACTION_LABELS_UR[msg.suggestedAction]
+                                  : ACTION_LABELS_EN[msg.suggestedAction]}
+                              </span>
+                              <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+                            </button>
+                          )}
 
-                        {/* Retry button for transient errors */}
-                        {msg.retryPrompt && msg.mode === 'error' && (
+                        {/* In-place Retry button without duplicating user messages */}
+                        {msg.retryPrompt && isFallbackOrError && (
                           <button
                             type="button"
-                            onClick={() => void sendMessage(msg.retryPrompt!)}
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#A32035] hover:underline"
+                            disabled={isSending}
+                            onClick={() =>
+                              void sendMessage(msg.retryPrompt!, {
+                                removeMsgId: msg.id,
+                                existingUserMsgId: msg.pairedUserMsgId,
+                              })
+                            }
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#A32035] hover:underline disabled:opacity-50"
                           >
                             <RefreshCw className="w-3.5 h-3.5" />
-                            <span>{chatLang === 'ur' ? 'دوبارہ کوشش کریں' : 'Retry'}</span>
+                            <span>
+                              {chatLang === 'ur' ? 'لائیو جواب دوبارہ حاصل کریں' : 'Retry Live Answer'}
+                            </span>
                           </button>
                         )}
 
                         {/* Source & Last Updated Footer */}
-                        <div className="pt-1.5 border-t border-[#E5E7EB]/70 flex flex-wrap items-center justify-between gap-1 text-[10px] text-[#5C6066]">
-                          <span className="truncate max-w-[230px]">
-                            {msg.sources && msg.sources.length > 0
-                              ? `${msg.sources[0]}${msg.authenticatedAccess ? ' · Account Linked' : ''}`
-                              : 'Official PQFTL Channel'}
-                          </span>
-                          <span className="tabular-nums">
-                            {msg.knowledgeBaseUpdatedAt
-                              ? `Updated ${msg.knowledgeBaseUpdatedAt}`
-                              : msg.timestamp}
-                          </span>
-                        </div>
+                        {!msg.isStreaming && (
+                          <div className="pt-1.5 border-t border-[#E5E7EB]/70 flex flex-wrap items-center justify-between gap-1 text-[10px] text-[#5C6066]">
+                            <span className="truncate max-w-[230px]">
+                              {msg.sources && msg.sources.length > 0
+                                ? `${msg.sources[0]}${msg.authenticatedAccess ? ' · Account Linked' : ''}`
+                                : 'Official PQFTL Channel'}
+                            </span>
+                            <span className="tabular-nums">
+                              {msg.knowledgeBaseUpdatedAt
+                                ? `Updated ${msg.knowledgeBaseUpdatedAt}`
+                                : msg.timestamp}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
                 })}
 
-                {/* Typing Indicator */}
-                {isSending && (
-                  <div className="flex justify-start" aria-live="polite" aria-label="Assistant is typing">
-                    <div className="rounded-2xl rounded-bl-sm bg-white border border-[#E5E7EB] px-4 py-3 flex items-center gap-1.5">
+                {/* Typing Indicator shown cleanly until the first streamed chunk arrives */}
+                {isSending && !hasFirstStreamChunk && (
+                  <div
+                    className="flex justify-start"
+                    aria-live="polite"
+                    aria-label="Assistant is typing"
+                  >
+                    <div className="rounded-2xl rounded-bl-sm bg-white border border-[#E5E7EB] px-4 py-3 flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-[#007A48] animate-bounce" />
                       <span
                         className="w-2 h-2 rounded-full bg-[#F5B335] animate-bounce"
@@ -968,6 +1303,9 @@ export const PakQatarAssistant: React.FC<PakQatarAssistantProps> = ({
                         className="w-2 h-2 rounded-full bg-[#A32035] animate-bounce"
                         style={{ animationDelay: '240ms' }}
                       />
+                      <span className="text-[11px] text-[#5C6066] ml-1">
+                        {chatLang === 'ur' ? 'جواب تیار ہو رہا ہے...' : 'Preparing answer...'}
+                      </span>
                     </div>
                   </div>
                 )}
@@ -1033,7 +1371,7 @@ export const PakQatarAssistant: React.FC<PakQatarAssistantProps> = ({
                           : 'Listening...'
                         : chatLang === 'ur'
                           ? 'اپنا سوال لکھیں...'
-                          : 'Ask about Takaful, claims, or payments...'
+                          : 'Ask about plans, eligibility, documents, or claims...'
                     }
                     className="flex-1 min-h-[44px] px-3.5 rounded-2xl border border-[#E5E7EB] bg-[#F7F5F2] text-sm text-[#1E2022] placeholder:text-[#5C6066] focus:outline-none focus:border-[#007A48]"
                   />
